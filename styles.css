@@ -48,23 +48,30 @@ h1{font-size:1.35rem;margin:0}
 .btn.white{background:var(--white);color:var(--black);border:1px solid #e2e8f0}
 .btn.block{width:100%}
 
+/* Scrollable content for long lists */
 .listWrap{max-height:72vh;overflow:auto;padding-right:4px}
 .list{display:flex;flex-direction:column;gap:14px;padding-bottom:10px}
+
+/* Item is now two stacked rows to prevent overlap on phones */
 .item{
-  display:flex;gap:14px;align-items:center;justify-content:space-between;
+  display:flex;flex-direction:column;gap:10px;
   padding:14px;border-radius:14px;background:#0b1220;border:1px solid var(--line)
 }
-.left{display:flex;gap:12px;align-items:center;min-width:0}
+
+/* Row 1: number + name + meta */
+.itemHead{display:flex;align-items:center;gap:12px;min-width:0}
 .num{
   width:30px;height:30px;border-radius:8px;background:#0d243a;color:#bcd7ff;
   display:inline-grid;place-items:center;font-weight:700;font-size:.92rem;border:1px solid #153b63;flex:0 0 30px
 }
-.label{font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52vw}
+.labelWrap{min-width:0;display:flex;flex-direction:column}
+.label{font-size:1.05rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .meta{font-size:.9rem;color:var(--muted)}
-.actions{display:flex;gap:10px;flex-wrap:wrap}
-.timer{min-width:92px;text-align:center;padding:8px 12px;border-radius:10px;border:1px dashed #1f354f;color:#cfe3ff;background:#0a1b30;font-variant-numeric:tabular-nums}
+
+/* Row 2: timer + controls; wraps nicely */
+.itemControls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.timer{min-width:100px;text-align:center;padding:8px 12px;border-radius:10px;border:1px dashed #1f354f;color:#cfe3ff;background:#0a1b30;font-variant-numeric:tabular-nums}
 .crossed .label{text-decoration:line-through;color:#a0a9b6}
-.crossed .num{background:#10231a;border-color:#14532d;color:#9ee6be}
 .empty{color:var(--muted);padding:14px;text-align:center;border:1px dashed var(--line);border-radius:12px}
 
 /* Day selector */
@@ -100,8 +107,7 @@ dialog{border:none;border-radius:16px;padding:0;background:transparent}
 
 /* Small phones */
 @media (max-width:360px){
-  .label{max-width:46vw}
-  .timer{min-width:84px}
+  .timer{min-width:92px}
 }
 
 /* Larger screens */
