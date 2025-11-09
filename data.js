@@ -1,8 +1,4 @@
-// Configure all editable data here.
-// Times are seconds; youtube is optional.
-// Warm-up and Cool-down are same every day.
-// workoutsByDay is keyed by 1..7 (Day 1..Day 7).
-
+// Edit your plan here. Times in seconds; youtube optional.
 const PROGRAM = {
   warmup: [
     { name: "Joint mobility", seconds: 60 },
@@ -14,6 +10,7 @@ const PROGRAM = {
     { name: "Hip flexor stretch", seconds: 45 },
     { name: "Breathing", seconds: 60 },
   ],
+  // Day 1..7
   workoutsByDay: {
     1: [
       { name: "Pushups", seconds: 60, youtube: "https://www.youtube.com/watch?v=IODxDxX7oi4" },
