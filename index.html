@@ -2,100 +2,50 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>My Own Fitness App</title>
+  <title>My Fitness Day</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <main id="app">
-    <!-- App header -->
-    <header class="app-header">
-      <h1>My Own Fitness</h1>
-      <div id="dateDisplay" class="date-display" aria-live="polite"></div>
+  <div class="wrap">
+    <header class="bar">
+      <div class="title">
+        <h1>My Fitness Day</h1>
+        <div class="date" id="today"></div>
+      </div>
+      <button class="btn ghost" id="resetDayBtn" title="Reset today">Reset Day</button>
     </header>
 
-    <!-- Home screen -->
-    <section id="screen-home" class="screen">
-      <div class="card">
-        <h2>Ready for today's session?</h2>
-        <p id="home-day-name"></p>
-        <div class="controls">
-          <button id="start-day-btn" class="primary">Start Day</button>
-          <button id="view-config-btn" class="secondary">Edit Exercises in code</button>
-        </div>
+    <section class="card">
+      <div class="timeline" id="timeline">
+        <div class="chip" data-phase="warmup">Warm‑up</div>
+        <div class="chip" data-phase="workout">Workout</div>
+        <div class="chip" data-phase="cooldown">Cool‑down</div>
+      </div>
+      <div class="row">
+        <button class="btn" id="startBtn">Start Today</button>
+        <span class="pill" id="phasePill">Not started</span>
       </div>
     </section>
 
-    <!-- Warmup screen -->
-    <section id="screen-warmup" class="screen hidden">
-      <div class="card">
-        <h2>Warm Up</h2>
-        <ol id="warmup-list" class="activity-list" aria-live="polite"></ol>
-        <div class="controls">
-          <button id="skip-warmup-btn" class="secondary">Skip Warmup</button>
+    <section class="section">
+      <h2 id="sectionTitle">Ready</h2>
+      <div id="list" class="list"></div>
+      <div id="empty" class="empty" style="display:none"></div>
+      <div class="footer">
+        <button class="btn secondary" id="prevBtn" style="display:none">Back</button>
+        <div class="row">
+          <button class="btn ghost" id="skipBtn" style="display:none">Skip Activity</button>
+          <button class="btn warn" id="nextPhaseBtn" style="display:none">Start Workout</button>
+          <button class="btn warn" id="toCoolBtn" style="display:none">Start Cool‑down</button>
+          <button class="btn" id="finishBtn" style="display:none">Finish Day</button>
         </div>
       </div>
     </section>
+  </div>
 
-    <!-- Workout screen -->
-    <section id="screen-workout" class="screen hidden">
-      <div class="card">
-        <h2 id="workout-heading">Workout</h2>
-        <p id="workout-subtitle" class="muted"></p>
-        <ol id="workout-list" class="activity-list" aria-live="polite"></ol>
-        <div class="controls">
-          <button id="start-cooldown-btn" class="secondary hidden">Start Cooldown</button>
-          <button id="reset-day-after-workout-btn" class="secondary hidden">Reset Day</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Cooldown screen -->
-    <section id="screen-cooldown" class="screen hidden">
-      <div class="card">
-        <h2>Cool Down</h2>
-        <ol id="cooldown-list" class="activity-list" aria-live="polite"></ol>
-        <div class="controls">
-          <button id="finish-day-btn" class="primary hidden">Finish Day</button>
-          <button id="reset-day-cooldown-btn" class="secondary">Reset Day</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Summary screen -->
-    <section id="screen-summary" class="screen hidden">
-      <div class="card">
-        <h2>Session Summary</h2>
-        <div id="summary-body"></div>
-        <div class="controls">
-          <button id="advance-day-btn" class="primary">Start Next Day</button>
-          <button id="reset-day-btn" class="secondary">Reset Current Day</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Global timer modal -->
-    <div id="timer-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="timer-title">
-      <div class="modal-content">
-        <h3 id="timer-title">Timer</h3>
-        <p id="timer-activity"></p>
-        <div id="timer-display" class="timer-display">00:00</div>
-        <div class="modal-controls">
-          <button id="timer-pause" class="secondary">Pause</button>
-          <button id="timer-cancel" class="secondary">Cancel</button>
-        </div>
-      </div>
-    </div>
-
-    <audio id="ding-audio">
-      <source src="" />
-    </audio>
-
-    <footer class="app-footer">
-      <small>Phone-first | Edit exercises & durations in app.js</small>
-    </footer>
-  </main>
-
-  <script src="app.js" defer></script>
+  <!-- Load data first, then app -->
+  <script src="data.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
