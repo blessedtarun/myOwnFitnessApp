@@ -1,0 +1,166 @@
+:root{
+  --bg:#0f1724;
+  --card:#0b1220;
+  --accent:#16a34a;
+  --muted:#94a3b8;
+  --surface:#0b1220;
+  --text:#e6eef8;
+  --danger:#ef4444;
+  --max-width:480px; /* phone-first */
+  font-family: system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+*{box-sizing:border-box}
+html,body,#app{height:100%}
+body{
+  margin:0;
+  background:linear-gradient(180deg,#071023 0%, #071428 40%);
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+}
+
+#app{
+  width:100%;
+  max-width:var(--max-width);
+}
+
+/* Header */
+.app-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:12px;
+}
+.app-header h1{
+  font-size:1.05rem;
+  margin:0;
+}
+.date-display{
+  font-size:0.85rem;
+  color:var(--muted);
+}
+
+/* Card */
+.card{
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius:14px;
+  padding:14px;
+  box-shadow:0 6px 18px rgba(2,6,23,0.6);
+}
+
+/* Buttons */
+button{
+  font-size:1rem;
+  padding:10px 14px;
+  border-radius:10px;
+  border:0;
+  cursor:pointer;
+}
+button.primary{
+  background:var(--accent);
+  color:#042014;
+  font-weight:600;
+}
+button.secondary{
+  background:transparent;
+  border:1px solid rgba(255,255,255,0.06);
+  color:var(--text);
+}
+
+/* Controls layout */
+.controls{
+  margin-top:12px;
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+}
+
+/* Activity list */
+.activity-list{
+  margin:12px 0 0 0;
+  padding-left:18px;
+}
+.activity-list li{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:10px;
+  margin-bottom:10px;
+  background:rgba(255,255,255,0.02);
+  border-radius:10px;
+  list-style:decimal;
+}
+.activity-left{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex:1;
+}
+.activity-left .title{
+  font-weight:600;
+}
+.activity-meta{
+  color:var(--muted);
+  font-size:0.9rem;
+}
+
+/* Completed */
+.completed .title{
+  text-decoration:line-through;
+  opacity:0.6;
+}
+.completed{
+  background:linear-gradient(90deg, rgba(20,80,30,0.12), rgba(10,20,30,0.02));
+}
+
+/* Muted */
+.muted{color:var(--muted)}
+
+/* Hidden helper */
+.hidden{display:none}
+
+/* Modal */
+.modal{
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(2,6,23,0.6);
+  padding:18px;
+}
+.modal-content{
+  background:var(--surface);
+  padding:14px;
+  border-radius:12px;
+  min-width:220px;
+  text-align:center;
+  width:100%;
+  max-width:420px;
+}
+.timer-display{
+  font-size:2.4rem;
+  font-weight:700;
+  margin:10px 0;
+}
+
+/* Footer */
+.app-footer{
+  margin-top:12px;
+  text-align:center;
+  color:var(--muted);
+  font-size:0.82rem;
+}
+
+/* Responsive tweaks */
+@media(min-width:640px){
+  :root{--max-width:640px}
+  .activity-list li{padding:14px}
+}
