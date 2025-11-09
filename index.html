@@ -11,40 +11,65 @@
     <header class="bar">
       <div class="title">
         <h1>My Fitness Day</h1>
-        <div class="date" id="today"></div>
+        <!-- Removed date/time per request -->
       </div>
       <button class="btn ghost" id="resetDayBtn" title="Reset today">Reset Day</button>
     </header>
 
-    <section class="card">
-      <div class="timeline" id="timeline">
-        <div class="chip" data-phase="warmup">Warm‑up</div>
-        <div class="chip" data-phase="workout">Workout</div>
-        <div class="chip" data-phase="cooldown">Cool‑down</div>
-      </div>
-      <div class="row">
-        <button class="btn" id="startBtn">Start Today</button>
-        <span class="pill" id="phasePill">Not started</span>
+    <!-- Home: pick or view workout day 1-7 -->
+    <section class="card" id="homeCard">
+      <h2 class="sectionTitle">Select Workout Day</h2>
+      <p class="muted">Pick a workout day 1–7. Completed days are highlighted. You can change the day after warm‑up too.</p>
+      <div class="daysGrid" id="daysGrid"></div>
+      <div class="row topPad">
+        <button class="btn" id="startWarmupBtn">Start Warm‑up</button>
       </div>
     </section>
 
-    <section class="section">
-      <h2 id="sectionTitle">Ready</h2>
-      <div id="list" class="list"></div>
-      <div id="empty" class="empty" style="display:none"></div>
-      <div class="footer">
-        <button class="btn secondary" id="prevBtn" style="display:none">Back</button>
+    <!-- Live timeline + list -->
+    <section class="section" id="workSection" style="display:none">
+      <div class="card pad">
+        <div class="timeline" id="timeline">
+          <div class="chip" data-phase="warmup">Warm‑up</div>
+          <div class="chip" data-phase="workout">Workout (Day <span id="chipDay">1</span>)</div>
+          <div class="chip" data-phase="cooldown">Cool‑down</div>
+        </div>
+
         <div class="row">
-          <button class="btn ghost" id="skipBtn" style="display:none">Skip Activity</button>
-          <button class="btn warn" id="nextPhaseBtn" style="display:none">Start Workout</button>
-          <button class="btn warn" id="toCoolBtn" style="display:none">Start Cool‑down</button>
+          <span class="pill" id="phasePill">Warm‑up</span>
+          <button class="btn ghost" id="chooseDayMidBtn" style="display:none">Choose Day (1–7)</button>
+        </div>
+      </div>
+
+      <h2 id="sectionTitle" class="sectionTitle">Warm‑up</h2>
+
+      <div class="listWrap">
+        <div id="list" class="list" aria-live="polite"></div>
+        <div id="empty" class="empty" style="display:none"></div>
+      </div>
+
+      <div class="footer">
+        <button class="btn secondary" id="prevBtn">Back</button>
+        <div class="row">
+          <button class="btn ghost" id="skipBtn">Skip</button>
+          <button class="btn warn" id="nextPhaseBtn">Start Workout</button>
           <button class="btn" id="finishBtn" style="display:none">Finish Day</button>
         </div>
       </div>
     </section>
   </div>
 
-  <!-- Load data first, then app -->
+  <!-- Day picker dialog -->
+  <dialog id="dayDialog">
+    <form method="dialog" class="dialogCard">
+      <h3>Pick Workout Day (1–7)</h3>
+      <div class="daysGrid compact" id="dialogDays"></div>
+      <div class="row topPad">
+        <button class="btn ghost" value="cancel">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
   <script src="data.js"></script>
   <script src="app.js"></script>
 </body>
