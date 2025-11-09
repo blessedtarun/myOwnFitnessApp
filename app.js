@@ -1,43 +1,42 @@
-// ===== Persistence (localStorage) =====
-const KEY = "fitness.day.state.v1";
+// ===== Persistence =====
+const KEY = "fitness.day.state.v2";
 const todayKey = () => new Date().toISOString().slice(0,10);
 function loadState(){
   try{
     const raw = localStorage.getItem(KEY);
     if(!raw) return null;
     const s = JSON.parse(raw);
-    if(s.date !== todayKey()) return null; // auto-reset by date boundary
+    // Keep progress per calendar day; if day changed, reset progress but retain completedDays history
+    if(s.date !== todayKey()){
+      return { date: todayKey(), started: false, phase: "warmup", index: 0,
+        done:{warmup:[],workout:[],cooldown:[]}, timers:{}, selectedDay: s.selectedDay ?? 1,
+        completedDays: s.completedDays ?? {} };
+    }
     return s;
   }catch(e){ return null; }
 }
 function saveState(s){ localStorage.setItem(KEY, JSON.stringify(s)); }
-function hardReset(){
-  localStorage.removeItem(KEY);
-  state = freshState();
-  render();
-}
-// Reference: localStorage API persists simple key/values across refresh. [web:40][web:56]
 
-// ===== Program-state helpers =====
-const PHASES = ["warmup","workout","cooldown"];
+// ===== Initial State =====
 function freshState(){
-  const dow = new Date().getDay(); // 0=Sun..6=Sat
   return {
     date: todayKey(),
     started: false,
-    phase: "warmup",
+    phase: "home",
     index: 0,
     done: { warmup: [], workout: [], cooldown: [] },
-    timers: {}, // activityKey -> remaining seconds
-    weekday: dow
+    timers: {},
+    selectedDay: 1,          // 1–7 for workout selection
+    completedDays: {}        // map dayNumber->true when finished
   };
 }
 let state = loadState() || freshState();
 
 // ===== DOM =====
-const $today = document.getElementById("today");
-const $startBtn = document.getElementById("startBtn");
-const $resetDayBtn = document.getElementById("resetDayBtn");
+const $homeCard = document.getElementById("homeCard");
+const $daysGrid = document.getElementById("daysGrid");
+const $workSection = document.getElementById("workSection");
+const $chipDay = document.getElementById("chipDay");
 const $phasePill = document.getElementById("phasePill");
 const $timeline = document.getElementById("timeline");
 const $sectionTitle = document.getElementById("sectionTitle");
@@ -46,19 +45,36 @@ const $empty = document.getElementById("empty");
 const $prev = document.getElementById("prevBtn");
 const $skip = document.getElementById("skipBtn");
 const $nextPhase = document.getElementById("nextPhaseBtn");
-const $toCool = document.getElementById("toCoolBtn");
 const $finish = document.getElementById("finishBtn");
+const $startWarmupBtn = document.getElementById("startWarmupBtn");
+const $resetDayBtn = document.getElementById("resetDayBtn");
+const $chooseDayMidBtn = document.getElementById("chooseDayMidBtn");
+const $dayDialog = document.getElementById("dayDialog");
+const $dialogDays = document.getElementById("dialogDays");
 
-// ===== Timers =====
+// ===== Utilities =====
 const intervals = new Map(); // activityKey -> setInterval id
 function activityKey(phase, idx){ return `${state.date}:${phase}:${idx}`; }
 function fmt(sec){
-  sec = Math.max(0, Math.floor(sec));
+  sec = Math.max(0, Math.floor(sec||0));
   const m = Math.floor(sec/60).toString().padStart(2,"0");
   const s = (sec%60).toString().padStart(2,"0");
   return `${m}:${s}`;
 }
-// Use a simple setInterval countdown; when it hits zero, mark as done. [web:21][web:22]
+
+// ===== Data access =====
+function listForPhase(){
+  if(state.phase === "warmup") return PROGRAM.warmup;
+  if(state.phase === "workout"){
+    // Map 1–7 to 0–6 internally
+    const w = (state.selectedDay - 1);
+    return PROGRAM.workoutsByDay[w+1] || []; // data.js uses 1..7 keys
+  }
+  if(state.phase === "cooldown") return PROGRAM.cooldown;
+  return [];
+}
+
+// ===== Timers =====
 function startTimer(phase, idx, seconds, onTick, onDone){
   const key = activityKey(phase, idx);
   if(intervals.has(key)) clearInterval(intervals.get(key));
@@ -74,7 +90,7 @@ function startTimer(phase, idx, seconds, onTick, onDone){
       delete state.timers[key];
       onDone?.();
       saveState(state);
-    }else{
+    } else {
       saveState(state);
     }
   }, 1000);
@@ -83,34 +99,40 @@ function startTimer(phase, idx, seconds, onTick, onDone){
 }
 function stopTimer(phase, idx){
   const key = activityKey(phase, idx);
-  if(intervals.has(key)){ clearInterval(intervals.get(key)); intervals.delete(key); }
+  if(intervals.has(key)) clearInterval(intervals.get(key));
+  intervals.delete(key);
   delete state.timers[key];
   saveState(state);
 }
 
-// ===== Data access =====
-function listForPhase(){
-  if(state.phase === "warmup") return PROGRAM.warmup;
-  if(state.phase === "workout") return PROGRAM.workoutsByWeekday[state.weekday] || [];
-  return PROGRAM.cooldown;
-}
-function nextPhaseLabel(){
-  if(state.phase==="warmup") return "Start Workout";
-  if(state.phase==="workout") return "Start Cool‑down";
-  return "Finish Day";
-}
-
 // ===== Actions =====
-function startDay(){
+function renderDaysGrid(container, compact=false){
+  container.innerHTML = "";
+  for(let d=1; d<=7; d++){
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "dayBtn" + (state.completedDays[d] ? " completed":"") + (state.selectedDay===d ? " selected":"");
+    btn.textContent = d;
+    btn.title = `Workout Day ${d}`;
+    btn.onclick = ()=>{ state.selectedDay = d; saveState(state); syncChipDay(); renderDays(); if(compact){ $dayDialog.close(); afterDialogSelect(); } };
+    container.appendChild(btn);
+  }
+}
+function renderDays(){
+  renderDaysGrid($daysGrid, false);
+  renderDaysGrid($dialogDays, true);
+}
+function startWarmup(){
   state.started = true;
   state.phase = "warmup";
   state.index = 0;
-  saveState(state); render();
+  saveState(state);
+  showWork();
+  render();
 }
 function markDone(phase, idx){
   const arr = state.done[phase];
   if(!arr.includes(idx)) arr.push(idx);
-  if(state.index === idx) state.index = Math.min(idx+1, listForPhase().length-1);
   saveState(state); render();
 }
 function unmarkDone(phase, idx){
@@ -126,59 +148,87 @@ function prevActivity(){
   saveState(state); render();
 }
 function advancePhase(){
-  if(state.phase === "warmup"){ state.phase = "workout"; }
-  else if(state.phase === "workout"){ state.phase = "cooldown"; }
-  else { finishDay(); return; }
-  state.index = 0;
-  saveState(state); render();
+  if(state.phase === "warmup"){
+    // After warm-up, allow day change via dialog
+    openDayDialog(true);
+  } else if(state.phase === "workout"){
+    state.phase = "cooldown";
+    state.index = 0;
+    saveState(state); render();
+  } else {
+    finishDay();
+  }
+}
+function afterDialogSelect(){
+  if(state.phase === "warmup"){
+    state.phase = "workout";
+    state.index = 0;
+    saveState(state); render();
+  }
 }
 function finishDay(){
+  // mark selectedDay as completed
+  state.completedDays[state.selectedDay] = true;
+  // clear timers
   [...intervals.keys()].forEach(k=>clearInterval(intervals.get(k)));
   intervals.clear();
-  state = freshState();
+  // reset progress but keep completedDays & selectedDay for today
+  state.done = { warmup:[], workout:[], cooldown:[] };
+  state.phase = "home";
+  state.index = 0;
   saveState(state);
-  render();
+  hideWork();
+  renderDays();
 }
 
-// ===== Render =====
-function render(){
-  const d = new Date();
-  $today.textContent = d.toLocaleDateString(undefined,{ weekday:"long", year:"numeric", month:"short", day:"numeric" });
+// ===== UI show/hide =====
+function showHome(){
+  $homeCard.style.display = "block";
+  $workSection.style.display = "none";
+}
+function showWork(){
+  $homeCard.style.display = "none";
+  $workSection.style.display = "block";
+}
+function hideWork(){ showHome(); }
 
-  // timeline
+// ===== Dialog helpers =====
+function openDayDialog(mid=false){
+  if(mid){ $chooseDayMidBtn.style.display = "none"; }
+  $dayDialog.showModal();
+}
+function syncChipDay(){ $chipDay.textContent = String(state.selectedDay); }
+
+// ===== Render main =====
+function render(){
+  // section title & pill
+  if(state.phase==="warmup"){ $sectionTitle.textContent = "Warm‑up"; $phasePill.textContent = "Warm‑up"; }
+  else if(state.phase==="workout"){ $sectionTitle.textContent = `Workout • Day ${state.selectedDay}`; $phasePill.textContent = `Workout (Day ${state.selectedDay})`; }
+  else if(state.phase==="cooldown"){ $sectionTitle.textContent = "Cool‑down"; $phasePill.textContent = "Cool‑down"; }
+
+  // timeline chips active state
   [...$timeline.querySelectorAll(".chip")].forEach(ch=>{
     const p = ch.getAttribute("data-phase");
     ch.classList.toggle("active", state.phase===p && state.started);
   });
 
-  // pill
-  if(!state.started){ $phasePill.textContent = "Not started"; }
-  else{
-    const label = state.phase==="workout"
-      ? `Workout (${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][state.weekday]})`
-      : state.phase.charAt(0).toUpperCase()+state.phase.slice(1);
-    $phasePill.textContent = label;
-  }
+  // mid-workout day choose button visible only after warm-up
+  $chooseDayMidBtn.style.display = state.started && state.phase!=="warmup" && state.phase!=="cooldown" ? "inline-flex" : "none";
 
-  // controls
-  $startBtn.style.display = state.started ? "none" : "inline-flex";
+  // control buttons
   $prev.style.display = state.started ? "inline-flex" : "none";
   $skip.style.display = state.started ? "inline-flex" : "none";
-  $nextPhase.style.display = state.started && state.phase!=="cooldown" ? "inline-flex" : "none";
-  $toCool.style.display = state.started && state.phase==="workout" ? "inline-flex" : "none";
+  $nextPhase.style.display = state.started ? "inline-flex" : "none";
   $finish.style.display = state.started && state.phase==="cooldown" ? "inline-flex" : "none";
-
-  // section title
-  if(!state.started){ $sectionTitle.textContent = "Ready"; }
-  else if(state.phase==="warmup"){ $sectionTitle.textContent = "Warm‑up"; }
-  else if(state.phase==="workout"){ $sectionTitle.textContent = "Workout"; }
-  else { $sectionTitle.textContent = "Cool‑down"; }
+  $nextPhase.textContent = state.phase==="warmup" ? "Choose Day → Start Workout"
+                       : state.phase==="workout" ? "Start Cool‑down"
+                       : "Finish Day";
 
   // list
   const items = listForPhase();
   $list.innerHTML = "";
   $empty.style.display = items.length ? "none" : "block";
-  $empty.textContent = items.length ? "" : "No activities defined for this section.";
+  $empty.textContent = items.length ? "" : "No activities defined.";
 
   items.forEach((it, i)=>{
     const crossed = state.done[state.phase].includes(i);
@@ -197,7 +247,7 @@ function render(){
     label.textContent = it.name;
     const meta = document.createElement("div");
     meta.className = "meta";
-    const mins = Math.round((it.seconds||0)/60);
+    const mins = Math.max(1, Math.round((it.seconds||60)/60));
     meta.textContent = `${mins} min${it.youtube ? " • Video" : ""}`;
 
     labWrap.appendChild(label); labWrap.appendChild(meta);
@@ -209,18 +259,14 @@ function render(){
     const timer = document.createElement("div");
     timer.className = "timer";
     const key = activityKey(state.phase, i);
-    const remain = (state.timers[key] ?? it.seconds);
-    timer.textContent = fmt(remain || 0);
+    const remain = (state.timers[key] ?? (it.seconds||60));
+    timer.textContent = fmt(remain);
 
     const startB = document.createElement("button");
     startB.className = "btn ghost";
     startB.textContent = "Start";
     startB.onclick = ()=>{
-      startTimer(state.phase, i, it.seconds||0, s=>{
-        timer.textContent = fmt(s);
-      }, ()=>{
-        markDone(state.phase, i);
-      });
+      startTimer(state.phase, i, it.seconds||60, s=>{ timer.textContent = fmt(s); }, ()=>{ markDone(state.phase, i); });
     };
 
     const stopB = document.createElement("button");
@@ -228,7 +274,7 @@ function render(){
     stopB.textContent = "Stop";
     stopB.onclick = ()=>{
       stopTimer(state.phase, i);
-      timer.textContent = fmt(it.seconds||0);
+      timer.textContent = fmt(it.seconds||60);
     };
 
     const doneB = document.createElement("button");
@@ -243,11 +289,11 @@ function render(){
 
     if(it.youtube){
       const a = document.createElement("a");
-      a.className = "yt";
+      a.className = "btn white";            // white bg, black text for visibility
       a.href = it.youtube;
       a.target = "_blank";
       a.rel = "noopener";
-      a.textContent = "Watch";
+      a.textContent = "Watch Video";
       actions.appendChild(a);
     }
 
@@ -255,33 +301,24 @@ function render(){
     row.appendChild(actions);
     $list.appendChild(row);
   });
-
-  // next-phase button label
-  const allDone = items.length && state.done[state.phase].length === items.length;
-  if(allDone){
-    if(state.phase==="warmup"){ $nextPhase.textContent = "Start Workout"; }
-    else if(state.phase==="workout"){ $nextPhase.textContent = "Start Cool‑down"; }
-    else { $finish.textContent = "Finish Day"; }
-  }
 }
 
-// Daily auto-reset check on load/open by comparing stored date. [web:47][web:50]
-function ensureToday(){
-  if(state.date !== todayKey()){
-    state = freshState();
-    saveState(state);
-  }
+// ===== Home / Work routing =====
+function route(){
+  if(!state.started || state.phase==="home"){ showHome(); }
+  else { showWork(); }
+  syncChipDay();
+  renderDays();
+  render();
 }
 
-// Wire up
-document.getElementById("startBtn").addEventListener("click", startDay);
-document.getElementById("resetDayBtn").addEventListener("click", ()=>{ if(confirm("Reset today?")) hardReset(); });
+// ===== Wire up =====
+document.getElementById("startWarmupBtn").addEventListener("click", startWarmup);
+$resetDayBtn.addEventListener("click", ()=>{ if(confirm("Reset today?")) { state = freshState(); saveState(state); route(); } });
 document.getElementById("prevBtn").addEventListener("click", prevActivity);
 document.getElementById("skipBtn").addEventListener("click", skipActivity);
 document.getElementById("nextPhaseBtn").addEventListener("click", advancePhase);
-document.getElementById("toCoolBtn").addEventListener("click", ()=>{ if(state.phase==="workout"){ state.phase="cooldown"; state.index=0; saveState(state); render(); }});
 document.getElementById("finishBtn").addEventListener("click", finishDay);
+$chooseDayMidBtn.addEventListener("click", ()=>openDayDialog(true));
 
-// Init
-ensureToday();
-render();
+route();
