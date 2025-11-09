@@ -1,5 +1,5 @@
-// ===== Persistence (localStorage only; per-device) =====
-const KEY = "fitness.day.state.v2";
+// ===== Persistence (localStorage only; per device) =====
+const KEY = "fitness.day.state.v3";
 const todayKey = () => new Date().toISOString().slice(0,10);
 function loadState(){
   try{
@@ -25,7 +25,7 @@ function freshState(){
     done: { warmup: [], workout: [], cooldown: [] },
     timers: {},
     selectedDay: 1,      // 1..7
-    completedDays: {}    // {1:true, ...}
+    completedDays: {}    // {1:true,...}
   };
 }
 let state = loadState() || freshState();
@@ -159,7 +159,7 @@ function prevActivity(){
 }
 function advancePhase(){
   if(state.phase === "warmup"){
-    openDayDialog(true); // choose day then move to workout
+    $dayDialog.showModal(); // choose day then move to workout
   } else if(state.phase === "workout"){
     state.phase = "cooldown";
     state.index = 0;
@@ -170,10 +170,8 @@ function advancePhase(){
 }
 function finishDay(){
   state.completedDays[state.selectedDay] = true;
-  // clear timers
   [...intervals.keys()].forEach(k=>clearInterval(intervals.get(k)));
   intervals.clear();
-  // reset progress but keep selections
   state.done = { warmup:[], workout:[], cooldown:[] };
   state.phase = "home";
   state.index = 0;
@@ -206,25 +204,19 @@ function resetCompletedDays(){
 function showHome(){ $homeCard.style.display = "block"; $workSection.style.display = "none"; }
 function showWork(){ $homeCard.style.display = "none"; $workSection.style.display = "block"; }
 function hideWork(){ showHome(); }
-function openDayDialog(){ $dayDialog.showModal(); }
 function syncChipDay(){ $chipDay.textContent = String(state.selectedDay); }
 
 function render(){
-  // titles and pill
   if(state.phase==="warmup"){ $sectionTitle.textContent = "Warm‑up"; $phasePill.textContent = "Warm‑up"; }
   else if(state.phase==="workout"){ $sectionTitle.textContent = `Workout • Day ${state.selectedDay}`; $phasePill.textContent = `Workout (Day ${state.selectedDay})`; }
   else if(state.phase==="cooldown"){ $sectionTitle.textContent = "Cool‑down"; $phasePill.textContent = "Cool‑down"; }
 
-  // timeline chips
   [...$timeline.querySelectorAll(".chip")].forEach(ch=>{
     const p = ch.getAttribute("data-phase");
     ch.classList.toggle("active", state.phase===p && state.started);
   });
 
-  // mid choose-day only after warm-up
   $chooseDayMidBtn.style.display = state.started && state.phase==="workout" ? "inline-flex" : "none";
-
-  // control buttons
   $prev.style.display = state.started ? "inline-flex" : "none";
   $skip.style.display = state.started ? "inline-flex" : "none";
   $nextPhase.style.display = state.started ? "inline-flex" : "none";
@@ -233,7 +225,6 @@ function render(){
                        : state.phase==="workout" ? "Start Cool‑down"
                        : "Finish Day";
 
-  // list
   const items = listForPhase();
   $list.innerHTML = "";
   $empty.style.display = items.length ? "none" : "block";
@@ -241,16 +232,20 @@ function render(){
 
   items.forEach((it, i)=>{
     const crossed = state.done[state.phase].includes(i);
-    const row = document.createElement("div");
-    row.className = "item" + (crossed ? " crossed" : "");
 
-    const left = document.createElement("div");
-    left.className = "left";
+    const item = document.createElement("div");
+    item.className = "item" + (crossed ? " crossed" : "");
+
+    // Row 1: number + name + meta
+    const head = document.createElement("div");
+    head.className = "itemHead";
+
     const num = document.createElement("div");
     num.className = "num";
     num.textContent = i+1;
 
-    const labWrap = document.createElement("div");
+    const labelWrap = document.createElement("div");
+    labelWrap.className = "labelWrap";
     const label = document.createElement("div");
     label.className = "label";
     label.textContent = it.name;
@@ -259,11 +254,14 @@ function render(){
     const mins = Math.max(1, Math.round((it.seconds||60)/60));
     meta.textContent = `${mins} min${it.youtube ? " • Video" : ""}`;
 
-    labWrap.appendChild(label); labWrap.appendChild(meta);
-    left.appendChild(num); left.appendChild(labWrap);
+    labelWrap.appendChild(label);
+    labelWrap.appendChild(meta);
+    head.appendChild(num);
+    head.appendChild(labelWrap);
 
-    const actions = document.createElement("div");
-    actions.className = "actions";
+    // Row 2: timer + controls + watch
+    const controls = document.createElement("div");
+    controls.className = "itemControls";
 
     const timer = document.createElement("div");
     timer.className = "timer";
@@ -286,24 +284,24 @@ function render(){
     doneB.textContent = crossed ? "Undo" : "Done";
     doneB.onclick = ()=> crossed ? unmarkDone(state.phase, i) : markDone(state.phase, i);
 
-    actions.appendChild(timer);
-    actions.appendChild(startB);
-    actions.appendChild(stopB);
-    actions.appendChild(doneB);
+    controls.appendChild(timer);
+    controls.appendChild(startB);
+    controls.appendChild(stopB);
+    controls.appendChild(doneB);
 
     if(it.youtube){
       const a = document.createElement("a");
-      a.className = "btn white"; // white bg, black text
+      a.className = "btn white";
       a.href = it.youtube;
       a.target = "_blank";
       a.rel = "noopener";
       a.textContent = "Watch Video";
-      actions.appendChild(a);
+      controls.appendChild(a);
     }
 
-    row.appendChild(left);
-    row.appendChild(actions);
-    $list.appendChild(row);
+    item.appendChild(head);
+    item.appendChild(controls);
+    $list.appendChild(item);
   });
 }
 
@@ -317,7 +315,7 @@ function route(){
 }
 
 // ===== Wire up =====
-$startWarmupBtn.addEventListener("click", startWarmup);
+document.getElementById("startWarmupBtn").addEventListener("click", startWarmup);
 $resetDayBtn.addEventListener("click", resetToday);
 $resetCompletedBtn.addEventListener("click", resetCompletedDays);
 $chooseDayMidBtn.addEventListener("click", ()=> $dayDialog.showModal());
