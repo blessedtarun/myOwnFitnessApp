@@ -9,20 +9,20 @@
 <body>
   <div class="wrap">
     <header class="bar">
-      <div class="title">
-        <h1>My Fitness Day</h1>
-        <!-- Removed date/time per request -->
+      <h1>My Fitness Day</h1>
+      <div class="row">
+        <button class="btn ghost" id="resetCompletedBtn" title="Clear completed days">Reset Completed Days</button>
+        <button class="btn ghost" id="resetDayBtn" title="Reset today">Reset Day</button>
       </div>
-      <button class="btn ghost" id="resetDayBtn" title="Reset today">Reset Day</button>
     </header>
 
     <!-- Home: pick or view workout day 1-7 -->
     <section class="card" id="homeCard">
       <h2 class="sectionTitle">Select Workout Day</h2>
-      <p class="muted">Pick a workout day 1–7. Completed days are highlighted. You can change the day after warm‑up too.</p>
+      <p class="muted">Pick a day 1–7. Completed days are highlighted; you can change the day after warm‑up too.</p>
       <div class="daysGrid" id="daysGrid"></div>
       <div class="row topPad">
-        <button class="btn" id="startWarmupBtn">Start Warm‑up</button>
+        <button class="btn block" id="startWarmupBtn">Start Warm‑up</button>
       </div>
     </section>
 
