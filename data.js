@@ -1,5 +1,8 @@
-// Edit your warmups, cooldowns, and weekday workouts here.
-// Times are seconds; youtube is optional. Keep keys as shown.
+// Configure all editable data here.
+// Times are seconds; youtube is optional.
+// Warm-up and Cool-down are same every day.
+// workoutsByDay is keyed by 1..7 (Day 1..Day 7).
+
 const PROGRAM = {
   warmup: [
     { name: "Joint mobility", seconds: 60 },
@@ -11,30 +14,29 @@ const PROGRAM = {
     { name: "Hip flexor stretch", seconds: 45 },
     { name: "Breathing", seconds: 60 },
   ],
-  // 0=Sun ... 6=Sat
-  workoutsByWeekday: {
-    0: [ // Sunday
-      { name: "Full body flow", seconds: 900, youtube: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" },
-    ],
-    1: [ // Monday
+  workoutsByDay: {
+    1: [
       { name: "Pushups", seconds: 60, youtube: "https://www.youtube.com/watch?v=IODxDxX7oi4" },
       { name: "Incline pushups", seconds: 60, youtube: "https://www.youtube.com/watch?v=E9wS9U4iGFM" },
       { name: "Plank", seconds: 60, youtube: "https://www.youtube.com/watch?v=pSHjTRCQxIw" },
     ],
-    2: [ // Tuesday
+    2: [
       { name: "Leg day circuit", seconds: 900, youtube: "https://www.youtube.com/watch?v=C_LG4m1Y5oY" },
     ],
-    3: [ // Wednesday
+    3: [
       { name: "Pull day", seconds: 900 },
     ],
-    4: [ // Thursday
+    4: [
       { name: "Core burner", seconds: 600 },
     ],
-    5: [ // Friday
+    5: [
       { name: "HIIT rounds", seconds: 600 },
     ],
-    6: [ // Saturday
+    6: [
       { name: "Mobility flow", seconds: 600 },
     ],
+    7: [
+      { name: "Full body flow", seconds: 900 },
+    ]
   }
 };
