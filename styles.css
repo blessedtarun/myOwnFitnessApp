@@ -2,6 +2,8 @@
   --bg:#0e1423; --card:#0f1a2b; --muted:#a3b0c4; --text:#e7edf6;
   --accent:#22c55e; --warn:#f59e0b; --danger:#ef4444; --line:#1f2c45;
   --pill:#0ea5e9; --white:#ffffff; --black:#111111;
+  --doneRed:#ff3b3b; --doneRedText:#2b0b0b; --doneRedEdge:#ff6b6b;
+  --flash:#fde047; /* yellow-ish */
 }
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -52,13 +54,28 @@ h1{font-size:1.35rem;margin:0}
 .listWrap{max-height:72vh;overflow:auto;padding-right:4px}
 .list{display:flex;flex-direction:column;gap:14px;padding-bottom:10px}
 
-/* Item is now two stacked rows to prevent overlap on phones */
+/* Item: two stacked rows */
 .item{
   display:flex;flex-direction:column;gap:10px;
-  padding:14px;border-radius:14px;background:#0b1220;border:1px solid var(--line)
+  padding:14px;border-radius:14px;background:#0b1220;border:1px solid var(--line);
+  transition:background .2s, border-color .2s;
 }
 
-/* Row 1: number + name + meta */
+/* Completed state: bright red card */
+.item.completed{
+  background: linear-gradient(180deg, #3b0b0b, #2b0b0b);
+  border-color: var(--doneRedEdge);
+}
+.item.completed .label{color:#ffdada}
+.item.completed .meta{color:#ffcaca}
+.item.completed .num{
+  background:#3b0b0b;color:#ffd0d0;border-color:#ff8b8b;
+}
+.item.completed .btn{background:var(--doneRed);color:var(--doneRedText)}
+.item.completed .btn.ghost{background:transparent;color:#ffd0d0;border-color:#ff8b8b}
+.item.completed .timer{border-color:#ff8b8b;color:#ffe5e5}
+
+/* Row 1 */
 .itemHead{display:flex;align-items:center;gap:12px;min-width:0}
 .num{
   width:30px;height:30px;border-radius:8px;background:#0d243a;color:#bcd7ff;
@@ -68,10 +85,19 @@ h1{font-size:1.35rem;margin:0}
 .label{font-size:1.05rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .meta{font-size:.9rem;color:var(--muted)}
 
-/* Row 2: timer + controls; wraps nicely */
+/* Row 2 */
 .itemControls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.timer{min-width:100px;text-align:center;padding:8px 12px;border-radius:10px;border:1px dashed #1f354f;color:#cfe3ff;background:#0a1b30;font-variant-numeric:tabular-nums}
-.crossed .label{text-decoration:line-through;color:#a0a9b6}
+.timer{
+  min-width:100px;text-align:center;padding:8px 12px;border-radius:10px;border:1px dashed #1f354f;color:#cfe3ff;background:#0a1b30;
+  font-variant-numeric:tabular-nums; transition:transform .1s, background .2s, color .2s, border-color .2s;
+}
+/* Last-5-seconds flash */
+.timer.last5{
+  background:#3a2a00;border-color:#d4a300;color:#ffe27a;
+  animation: pulse .5s steps(1,end) infinite;
+}
+@keyframes pulse{ 50% { transform: scale(1.05); } }
+
 .empty{color:var(--muted);padding:14px;text-align:center;border:1px dashed var(--line);border-radius:12px}
 
 /* Day selector */
