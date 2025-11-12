@@ -1,5 +1,5 @@
 // ===== Persistence (localStorage only; per device) =====
-const KEY = "fitness.day.state.v3";
+const KEY = "fitness.day.state.v4";
 const todayKey = () => new Date().toISOString().slice(0,10);
 function loadState(){
   try{
@@ -72,7 +72,11 @@ function listForPhase(){
   return [];
 }
 
-// ===== Timers =====
+// ===== Timers with “last 5s” visual =====
+function updateTimerClass(timerEl, remain){
+  if(remain <= 5){ timerEl.classList.add("last5"); }
+  else{ timerEl.classList.remove("last5"); }
+}
 function startTimer(phase, idx, seconds, onTick, onDone){
   const key = activityKey(phase, idx);
   if(intervals.has(key)) clearInterval(intervals.get(key));
@@ -234,7 +238,7 @@ function render(){
     const crossed = state.done[state.phase].includes(i);
 
     const item = document.createElement("div");
-    item.className = "item" + (crossed ? " crossed" : "");
+    item.className = "item" + (crossed ? " completed" : "");
 
     // Row 1: number + name + meta
     const head = document.createElement("div");
@@ -266,18 +270,19 @@ function render(){
     const timer = document.createElement("div");
     timer.className = "timer";
     const key = activityKey(state.phase, i);
-    const remain = (state.timers[key] ?? (it.seconds||60));
-    timer.textContent = fmt(remain);
+    const remainInit = (state.timers[key] ?? (it.seconds||60));
+    timer.textContent = fmt(remainInit);
+    updateTimerClass(timer, remainInit);
 
     const startB = document.createElement("button");
     startB.className = "btn ghost";
     startB.textContent = "Start";
-    startB.onclick = ()=> startTimer(state.phase, i, it.seconds||60, s=>{ timer.textContent = fmt(s); }, ()=>{ markDone(state.phase, i); });
+    startB.onclick = ()=> startTimer(state.phase, i, it.seconds||60, s=>{ timer.textContent = fmt(s); updateTimerClass(timer, s); }, ()=>{ markDone(state.phase, i); });
 
     const stopB = document.createElement("button");
     stopB.className = "btn ghost";
     stopB.textContent = "Stop";
-    stopB.onclick = ()=>{ stopTimer(state.phase, i); timer.textContent = fmt(it.seconds||60); };
+    stopB.onclick = ()=>{ stopTimer(state.phase, i); const resetTo = it.seconds||60; timer.textContent = fmt(resetTo); updateTimerClass(timer, resetTo); };
 
     const doneB = document.createElement("button");
     doneB.className = "btn";
