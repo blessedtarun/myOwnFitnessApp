@@ -3,7 +3,7 @@
   --accent:#22c55e; --warn:#f59e0b; --danger:#ef4444; --line:#1f2c45;
   --pill:#0ea5e9; --white:#ffffff; --black:#111111;
   --doneRed:#ff3b3b; --doneRedText:#2b0b0b; --doneRedEdge:#ff6b6b;
-  --flash:#fde047; /* yellow-ish */
+  --flash:#fde047;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -47,8 +47,16 @@ h1{font-size:1.35rem;margin:0}
 .btn.secondary{background:#0b5d3a;color:#b7f3d2}
 .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--text)}
 .btn.warn{background:var(--warn);color:#2b1600}
-.btn.white{background:var(--white);color:var(--black);border:1px solid #e2e8f0}
+.btn.white{background:var(--white);color:#111111;border:1px solid #e2e8f0;text-decoration:none}
 .btn.block{width:100%}
+
+/* Rest banner */
+.restBanner{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:10px;background:#1b2538;border:1px solid #2a3a59;border-radius:12px;
+  padding:10px 12px;margin:4px 0 10px;
+}
+.restText{font-weight:700}
 
 /* Scrollable content for long lists */
 .listWrap{max-height:72vh;overflow:auto;padding-right:4px}
@@ -61,13 +69,12 @@ h1{font-size:1.35rem;margin:0}
   transition:background .2s, border-color .2s;
 }
 
-/* Completed state: bright red card */
+/* Completed: bright red */
 .item.completed{
   background: linear-gradient(180deg, #3b0b0b, #2b0b0b);
   border-color: var(--doneRedEdge);
 }
 .item.completed .label{color:#ffdada}
-.item.completed .meta{color:#ffcaca}
 .item.completed .num{
   background:#3b0b0b;color:#ffd0d0;border-color:#ff8b8b;
 }
@@ -82,8 +89,10 @@ h1{font-size:1.35rem;margin:0}
   display:inline-grid;place-items:center;font-weight:700;font-size:.92rem;border:1px solid #153b63;flex:0 0 30px
 }
 .labelWrap{min-width:0;display:flex;flex-direction:column}
-.label{font-size:1.05rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.meta{font-size:.9rem;color:var(--muted)}
+.label{
+  font-size:1.05rem;font-weight:700;line-height:1.25;
+  overflow-wrap:anywhere; /* allows breaking long words */
+}
 
 /* Row 2 */
 .itemControls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
@@ -91,7 +100,6 @@ h1{font-size:1.35rem;margin:0}
   min-width:100px;text-align:center;padding:8px 12px;border-radius:10px;border:1px dashed #1f354f;color:#cfe3ff;background:#0a1b30;
   font-variant-numeric:tabular-nums; transition:transform .1s, background .2s, color .2s, border-color .2s;
 }
-/* Last-5-seconds flash */
 .timer.last5{
   background:#3a2a00;border-color:#d4a300;color:#ffe27a;
   animation: pulse .5s steps(1,end) infinite;
@@ -121,7 +129,7 @@ h1{font-size:1.35rem;margin:0}
 .dayBtn.completed{background:#0b3b21;border-color:#14532d;color:#b7f3d2}
 .dayBtn.selected{outline:2px solid var(--pill)}
 
-/* Dialog */
+/* Dialogs */
 dialog{border:none;border-radius:16px;padding:0;background:transparent}
 .dialogCard{
   background:rgba(15,26,43,.98);
@@ -130,6 +138,7 @@ dialog{border:none;border-radius:16px;padding:0;background:transparent}
   padding:16px;
   min-width:320px;
 }
+.settingRow{margin:8px 0}
 
 /* Small phones */
 @media (max-width:360px){
