@@ -1,5 +1,5 @@
 // ===== State (localStorage only) =====
-const KEY = "fitness.day.state.v6";
+const KEY = "fitness.day.state.v7";
 const todayKey = () => new Date().toISOString().slice(0,10);
 function loadState(){
   try{
@@ -81,25 +81,25 @@ function itemSeconds(phase, i, base){
   return state.overrides[k] ?? base ?? 0;
 }
 
-// Voice: cancel any queued speech and speak quickly to match timer step
+// Voice
 function speak(text){
   try{
     if(!state.settings.voice) return;
     if(!("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.rate = 1.3; // faster so 5..1 fits into 5 seconds
+    u.rate = 1.3;
     u.pitch = 1.0;
     window.speechSynthesis.speak(u);
   }catch(_){}
 }
 
-// Wake Lock helpers
+// Wake Lock
 async function requestWakeLock(){
   if(!state.settings.wakeLock) return;
   try{
     if('wakeLock' in navigator){
-      wakeLock = await navigator.wakeLock.request('screen');
+      if(!wakeLock) wakeLock = await navigator.wakeLock.request('screen');
       wakeLock.addEventListener('release', ()=>{});
     }
   }catch(_){}
@@ -119,7 +119,7 @@ function listForPhase(){
   return [];
 }
 
-// ===== Timer core (drift-free, precise last-5s voice) =====
+// ===== Timer core =====
 function updateTimerClass(timerEl, remain){
   if(!timerEl) return;
   if(remain <= 5){ timerEl.classList.add("last5"); if(state.settings.voice && remain >= 1) speak(String(remain)); }
@@ -137,11 +137,11 @@ function startTimer(phase, idx, seconds, onTick, onDone){
   requestWakeLock();
 
   const tick = ()=>{
-    const now = Date.now();
-    const remain = Math.max(0, Math.ceil((end - now)/1000));
-    state.timers[key] = remain;
+    const remain = Math.max(0, Math.ceil((end - Date.now())/1000));
     if(remain !== lastRemain){
+      state.timers[key] = remain;
       onTick(remain);
+      saveState(state);
       lastRemain = remain;
     }
     if(remain <= 0){
@@ -151,7 +151,6 @@ function startTimer(phase, idx, seconds, onTick, onDone){
       saveState(state);
       return;
     }
-    saveState(state);
     const id = setTimeout(tick, 200);
     intervals.set(key, id);
   };
@@ -170,7 +169,7 @@ function stopTimer(phase, idx){
   saveState(state);
 }
 
-// ===== Rest timer (drift-free) =====
+// ===== Rest timer =====
 function startRest(seconds, onFinish){
   clearRest();
   if(seconds <= 0){ onFinish?.(); return; }
@@ -210,9 +209,10 @@ function renderDaysGrid(container, compact=false){
       syncChipDay();
       renderDays();
       if(compact){
+        // Apply immediately depending on phase
         $dayDialog.close();
         if(state.phase==="warmup"){ toWorkout(); }
-        else if(state.phase==="workout"){ render(); }
+        if(state.phase==="workout"){ render(); }
       }
     };
     container.appendChild(btn);
@@ -240,12 +240,11 @@ function markDone(phase, idx){
   const arr = state.done[phase];
   if(!arr.includes(idx)) arr.push(idx);
   saveState(state); render();
-  // Auto rest after completed item in warmup/workout if more items pending
   if(phase !== "cooldown"){
     const items = listForPhase();
     const more = arr.length < items.length;
     if(more && state.settings.restSeconds > 0){
-      startRest(state.settings.restSeconds, ()=>{ /* no-op */ });
+      startRest(state.settings.restSeconds, ()=>{ /* ready for next */ });
     }
   }
 }
@@ -265,19 +264,19 @@ function prevActivity(){
 function advancePhase(){
   clearRest();
   if(state.phase === "warmup"){
-    $dayDialog.showModal(); // choose then switch in dialog handler
+    // open dialog and let the grid handler switch to workout
+    $dayDialog.showModal();
   } else if(state.phase === "workout"){
     state.phase = "cooldown";
     state.index = 0;
     saveState(state);
-    render(); // show cooldown items, do not finish here
+    render();
   } else {
     finishDay();
   }
 }
 function finishDay(){
   clearRest();
-  // stop all timers
   for(const id of intervals.values()) clearTimeout(id);
   intervals.clear();
   releaseWakeLock();
@@ -309,10 +308,11 @@ function render(){
     ch.classList.toggle("active", state.phase===p && state.started);
   });
 
+  // Bind choose-day button every render to be safe
   $chooseDayMidBtn.style.display = state.started && state.phase==="workout" ? "inline-flex" : "none";
   $chooseDayMidBtn.onclick = ()=> $dayDialog.showModal();
 
-  // Buttons
+  // Buttons and labels
   $finish.style.display = state.started && state.phase==="cooldown" ? "inline-flex" : "none";
   $nextPhase.textContent = state.phase==="warmup" ? "Choose Day → Start Workout"
                        : state.phase==="workout" ? "Start Cool‑down"
@@ -396,7 +396,7 @@ function render(){
       controls.appendChild(a);
     }
 
-    // Long-press to edit today's seconds
+    // Long-press override
     let pressTimer = null;
     const onPressStart = ()=>{ pressTimer = setTimeout(()=> openQuickEdit(state.phase, i, baseSecs, timer), 600); };
     const onPressEnd = ()=>{ clearTimeout(pressTimer); pressTimer = null; };
@@ -463,6 +463,8 @@ document.getElementById("nextPhaseBtn").addEventListener("click", advancePhase);
 document.getElementById("finishBtn").addEventListener("click", finishDay);
 document.getElementById("prevBtn").addEventListener("click", prevActivity);
 document.getElementById("skipBtn").addEventListener("click", skipActivity);
+
+// Ensure Skip Rest always cancels banner + timer
 $restSkipBtn.addEventListener("click", ()=>{ clearRest(); });
 
 route();
