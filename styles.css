@@ -140,6 +140,15 @@ dialog{border:none;border-radius:16px;padding:0;background:transparent}
 }
 .settingRow{margin:8px 0}
 
+.dialogCard, .dialogCard *{
+  color: var(--text);
+}
+.dialogCard input[type="checkbox"]{ accent-color: #22c55e; }
+.dialogCard input[type="number"]{
+  background:#0b1220; color: var(--text);
+  border:1px solid #2b3b5a; border-radius:8px; padding:8px;
+}
+
 /* Small phones */
 @media (max-width:360px){
   .timer{min-width:92px}
