@@ -11,6 +11,7 @@
     <header class="bar">
       <h1>My Fitness Day</h1>
       <div class="row">
+        <button class="btn ghost" id="settingsBtn" title="Settings">Settings</button>
         <button class="btn ghost" id="resetCompletedBtn" title="Clear completed days">Reset Completed Days</button>
         <button class="btn ghost" id="resetDayBtn" title="Reset today">Reset Day</button>
       </div>
@@ -19,7 +20,7 @@
     <!-- Home: pick or view workout day 1-7 -->
     <section class="card" id="homeCard">
       <h2 class="sectionTitle">Select Workout Day</h2>
-      <p class="muted">Pick a day 1–7. Completed days are highlighted; you can change the day after warm‑up too.</p>
+      <p class="muted">Pick a day 1–7. Completed days are highlighted; you can change the day after warm‑up.</p>
       <div class="daysGrid" id="daysGrid"></div>
       <div class="row topPad">
         <button class="btn block" id="startWarmupBtn">Start Warm‑up</button>
@@ -42,6 +43,14 @@
       </div>
 
       <h2 id="sectionTitle" class="sectionTitle">Warm‑up</h2>
+
+      <!-- Rest timer banner -->
+      <div id="restBanner" class="restBanner" style="display:none">
+        <div class="restText">Rest <span id="restRemain">00:30</span></div>
+        <div class="row">
+          <button class="btn" id="restSkipBtn">Skip Rest</button>
+        </div>
+      </div>
 
       <div class="listWrap">
         <div id="list" class="list" aria-live="polite"></div>
@@ -66,6 +75,25 @@
       <div class="daysGrid compact" id="dialogDays"></div>
       <div class="row topPad">
         <button class="btn ghost" value="cancel">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Settings dialog -->
+  <dialog id="settingsDialog">
+    <form method="dialog" class="dialogCard">
+      <h3>Settings</h3>
+      <div class="settingRow">
+        <label><input type="checkbox" id="wakeLockToggle" /> Keep screen awake during timers</label>
+      </div>
+      <div class="settingRow">
+        <label><input type="checkbox" id="voiceToggle" /> Voice cues in last 5 seconds</label>
+      </div>
+      <div class="settingRow">
+        <label>Rest timer (seconds): <input type="number" id="restSecondsInput" min="0" step="5" value="30" /></label>
+      </div>
+      <div class="row topPad">
+        <button class="btn" value="close">Close</button>
       </div>
     </form>
   </dialog>
