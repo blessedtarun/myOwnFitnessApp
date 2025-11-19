@@ -74,7 +74,7 @@ h1{font-size:1.35rem;margin:0}
 .listWrap{max-height:50vh;overflow:auto;padding-right:4px}
 .list{display:flex;flex-direction:column;gap:14px;padding-bottom:10px}
 
-/* List items (kept) */
+/* List items */
 .item{display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:14px;background:#0b1220;border:1px solid var(--line)}
 .item.completed{
   background: linear-gradient(180deg, #3b0b0b, #2b0b0b);
