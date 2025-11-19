@@ -27,7 +27,7 @@
       </div>
     </section>
 
-    <!-- Live timeline + list -->
+    <!-- Live timeline + focus + list -->
     <section class="section" id="workSection" style="display:none">
       <div class="card pad">
         <div class="timeline" id="timeline">
@@ -44,14 +44,31 @@
 
       <h2 id="sectionTitle" class="sectionTitle">Warm‑up</h2>
 
-      <!-- Rest timer banner -->
-      <div id="restBanner" class="restBanner" style="display:none">
-        <div class="restText">Rest <span id="restRemain">00:30</span></div>
-        <div class="row">
-          <button class="btn" id="restSkipBtn">Skip Rest</button>
+      <!-- Focus view -->
+      <div class="focusWrap">
+        <div class="prevNextRow">
+          <div id="prevSmall" class="smallCard" aria-live="polite">Prev: —</div>
+          <div id="nextSmall" class="smallCard" aria-live="polite">Next: —</div>
+        </div>
+
+        <div class="focusCenter">
+          <div id="focusName" class="focusName">—</div>
+          <div class="ringTimer" id="ringTimer" role="img" aria-label="Timer">
+            <svg viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="54" class="ringBg"></circle>
+              <circle cx="60" cy="60" r="54" class="ringFg" id="ringFg"></circle>
+              <text x="60" y="66" text-anchor="middle" class="ringText" id="ringText">00:00</text>
+            </svg>
+          </div>
+          <div class="focusActions">
+            <button class="btn ghost" id="focusStart">Start</button>
+            <button class="btn ghost" id="focusStop">Stop</button>
+            <button class="btn" id="focusDone">Done</button>
+          </div>
         </div>
       </div>
 
+      <!-- Optional list view (kept for reference and bulk ops) -->
       <div class="listWrap">
         <div id="list" class="list" aria-live="polite"></div>
         <div id="empty" class="empty" style="display:none"></div>
@@ -74,7 +91,7 @@
       <h3>Pick Workout Day (1–7)</h3>
       <div class="daysGrid compact" id="dialogDays"></div>
       <div class="row topPad">
-        <button class="btn ghost" value="cancel">Cancel</button>
+        <button class="btn" value="close">Close</button>
       </div>
     </form>
   </dialog>
@@ -88,9 +105,6 @@
       </div>
       <div class="settingRow">
         <label><input type="checkbox" id="voiceToggle" /> Voice cues in last 5 seconds</label>
-      </div>
-      <div class="settingRow">
-        <label>Rest timer (seconds): <input type="number" id="restSecondsInput" min="0" step="5" value="30" /></label>
       </div>
       <div class="row topPad">
         <button class="btn" value="close">Close</button>
