@@ -1,5 +1,5 @@
-// ===== Stable core (localStorage only) =====
-const KEY = "fitness.day.state.stable1";
+// ===== State (localStorage only) =====
+const KEY = "fitness.day.state.focus1";
 const todayKey = () => new Date().toISOString().slice(0,10);
 
 function loadState(){
@@ -11,11 +11,12 @@ function loadState(){
       date: todayKey(), started:false, phase:"home", index:0,
       done:{warmup:[],workout:[],cooldown:[]}, timers:{},
       selectedDay:1, completedDays:{},
-      settings:{ wakeLock:true, voice:true, restSeconds:30 },
+      settings:{ wakeLock:true, voice:true },
       overrides:{}
     };
-    // day rollover
-    if(s.date !== todayKey()) return { ...base, selectedDay: s.selectedDay ?? 1, completedDays: s.completedDays ?? {} };
+    if(s.date !== todayKey()){
+      return { ...base, selectedDay: s.selectedDay ?? 1, completedDays: s.completedDays ?? {} };
+    }
     return { ...base, ...s, settings:{...base.settings, ...(s.settings||{})}, overrides:s.overrides||{} };
   }catch{ return null; }
 }
@@ -24,11 +25,11 @@ let state = loadState() || {
   date: todayKey(), started:false, phase:"home", index:0,
   done:{warmup:[],workout:[],cooldown:[]}, timers:{},
   selectedDay:1, completedDays:{},
-  settings:{ wakeLock:true, voice:true, restSeconds:30 },
+  settings:{ wakeLock:true, voice:true },
   overrides:{}
 };
 
-// ===== DOM safe-get =====
+// ===== DOM =====
 const $ = id => document.getElementById(id);
 const $homeCard = $("homeCard"), $workSection=$("workSection");
 const $chipDay=$("chipDay"), $phasePill=$("phasePill"), $timeline=$("timeline");
@@ -37,12 +38,21 @@ const $prev=$("prevBtn"), $skip=$("skipBtn"), $next=$("nextPhaseBtn"), $finish=$
 const $startWarmup=$("startWarmupBtn"), $resetDay=$("resetDayBtn"), $resetCompleted=$("resetCompletedBtn");
 const $chooseDayMid=$("chooseDayMidBtn"), $dayDialog=$("dayDialog"), $dialogDays=$("dialogDays");
 const $settingsBtn=$("settingsBtn"), $settingsDialog=$("settingsDialog");
-const $wakeLockToggle=$("wakeLockToggle"), $voiceToggle=$("voiceToggle"), $restSecondsInput=$("restSecondsInput");
-const $daysGrid=$("daysGrid"), $restBanner=$("restBanner"), $restRemain=$("restRemain"), $restSkip=$("restSkipBtn");
+const $wakeLockToggle=$("wakeLockToggle"), $voiceToggle=$("voiceToggle");
+
+// Focus elements
+const $prevSmall = $("prevSmall");
+const $nextSmall = $("nextSmall");
+const $focusName = $("focusName");
+const $ringText = $("ringText");
+const $ringFg = $("ringFg");
+const $focusStart = $("focusStart");
+const $focusStop = $("focusStop");
+const $focusDone = $("focusDone");
 
 // ===== Helpers =====
 const intervals = new Map(); // key -> timeout id
-let restInterval = null; let wakeLock = null;
+let wakeLock = null;
 
 function activityKey(phase, idx){ return `${state.date}:${phase}:${idx}`; }
 function fmt(sec){ sec=Math.max(0,Math.floor(sec||0)); const m=String(Math.floor(sec/60)).padStart(2,"0"); const s=String(sec%60).padStart(2,"0"); return `${m}:${s}`; }
@@ -56,14 +66,32 @@ function listForPhase(){
 function speak(text){
   try{
     if(!state.settings.voice || !("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
+    speechSynthesis.cancel();
     const u=new SpeechSynthesisUtterance(text); u.rate=1.3; u.pitch=1.0; speechSynthesis.speak(u);
   }catch{}
 }
-async function requestWakeLock(){ if(!state.settings.wakeLock) return;
-  try{ if('wakeLock' in navigator && !wakeLock){ wakeLock=await navigator.wakeLock.request('screen'); } }catch{} }
+async function requestWakeLock(){
+  if(!state.settings.wakeLock) return;
+  try{ if('wakeLock' in navigator){ if(!wakeLock) wakeLock=await navigator.wakeLock.request('screen'); } }catch{}
+}
 async function releaseWakeLock(){ try{ if(wakeLock){ await wakeLock.release(); wakeLock=null; } }catch{} }
-function updateTimerClass(el,remain){ if(!el) return; if(remain<=5){ el.classList.add("last5"); if(remain>=1) speak(String(remain)); } else el.classList.remove("last5"); }
+document.addEventListener("visibilitychange", async ()=>{
+  if(document.visibilityState==="visible" && wakeLock){ try{ wakeLock = await navigator.wakeLock.request("screen"); }catch{} }
+}); // Re-acquire when visible [web:118][web:123]
+
+// Ring helpers
+function updateRing(remain, total){
+  total = Math.max(1, total||0);
+  remain = Math.max(0, remain||0);
+  const C = 2*Math.PI*54;
+  const ratio = Math.min(1, Math.max(0, remain/total));
+  const offset = C*(1 - ratio);
+  $ringFg.style.strokeDasharray = `${C}`;
+  $ringFg.style.strokeDashoffset = `${offset}`;
+}
+function updateTimerClassForVoice(remain){
+  if(remain<=5 && remain>=1) speak(String(remain));
+}
 
 // Drift-free timer
 function startTimer(phase, idx, seconds, onTick, onDone){
@@ -75,8 +103,13 @@ function startTimer(phase, idx, seconds, onTick, onDone){
   let last=-1;
   const tick=()=>{
     const remain=Math.max(0, Math.ceil((end-Date.now())/1000));
-    if(remain!==last){ state.timers[key]=remain; onTick(remain); saveState(state); last=remain; }
-    if(remain<=0){ delete state.timers[key]; intervals.delete(key); onDone?.(); saveState(state); return; }
+    if(remain!==last){
+      state.timers[key]=remain; onTick(remain); saveState(state); last=remain;
+      updateTimerClassForVoice(remain);
+    }
+    if(remain<=0){
+      delete state.timers[key]; intervals.delete(key); onDone?.(); saveState(state); return;
+    }
     const id=setTimeout(tick,200); intervals.set(key,id);
   };
   onTick(startRemain);
@@ -88,21 +121,7 @@ function stopTimer(phase, idx){
   intervals.delete(key); delete state.timers[key]; saveState(state);
 }
 
-// Rest timer
-function startRest(seconds, cb){
-  clearRest(); if(seconds<=0){ cb?.(); return; }
-  const end=Date.now()+seconds*1000; $restBanner.style.display="flex"; requestWakeLock();
-  let last=-1;
-  const step=()=>{
-    const r=Math.max(0, Math.ceil((end-Date.now())/1000));
-    if(r!==last){ $restRemain.textContent=fmt(r); if(r<=5&&r>=1) speak(String(r)); last=r; }
-    if(r<=0){ clearRest(); cb?.(); return; }
-    restInterval=setTimeout(step,200);
-  }; step();
-}
-function clearRest(){ if(restInterval){ clearTimeout(restInterval); restInterval=null; } $restBanner.style.display="none"; }
-
-// ===== UI Actions =====
+// ===== Actions =====
 function renderDaysGrid(container, compact){
   container.innerHTML="";
   for(let d=1; d<=7; d++){
@@ -117,7 +136,7 @@ function renderDaysGrid(container, compact){
     container.appendChild(b);
   }
 }
-function renderDays(){ renderDaysGrid($daysGrid,false); renderDaysGrid($dialogDays,true); }
+function renderDays(){ renderDaysGrid($("daysGrid"),false); renderDaysGrid($dialogDays,true); }
 function syncChipDay(){ $chipDay.textContent=String(state.selectedDay); }
 
 function showHome(){ $homeCard.style.display="block"; $workSection.style.display="none"; }
@@ -126,7 +145,7 @@ function showWork(){ $homeCard.style.display="none"; $workSection.style.display=
 function startWarmup(){ state.started=true; state.phase="warmup"; state.index=0; saveState(state); showWork(); render(); }
 function toWorkout(){ state.phase="workout"; state.index=0; saveState(state); render(); }
 function finishDay(){
-  clearRest(); for(const id of intervals.values()) clearTimeout(id);
+  for(const id of intervals.values()) clearTimeout(id);
   intervals.clear(); releaseWakeLock();
   state.completedDays[state.selectedDay]=true;
   state.done={warmup:[],workout:[],cooldown:[]};
@@ -137,17 +156,12 @@ function finishDay(){
 function markDone(phase, idx){
   const arr=state.done[phase]; if(!arr.includes(idx)) arr.push(idx);
   saveState(state); render();
-  if(phase!=="cooldown"){
-    const items=listForPhase(); const more=arr.length<items.length;
-    if(more && state.settings.restSeconds>0) startRest(state.settings.restSeconds, ()=>{});
-  }
 }
 function unmarkDone(phase, idx){ state.done[phase]=state.done[phase].filter(i=>i!==idx); saveState(state); render(); }
 
 function prevActivity(){ state.index=Math.max(0,state.index-1); saveState(state); render(); }
 function skipActivity(){ const n=listForPhase().length; state.index=Math.min(state.index+1, Math.max(0,n-1)); saveState(state); render(); }
 function advancePhase(){
-  clearRest();
   if(state.phase==="warmup"){ $dayDialog.showModal(); }
   else if(state.phase==="workout"){ state.phase="cooldown"; state.index=0; saveState(state); render(); }
   else { finishDay(); }
@@ -155,45 +169,36 @@ function advancePhase(){
 
 // ===== Render =====
 function render(){
-  // Titles
   if(state.phase==="warmup"){ $sectionTitle.textContent="Warm‑up"; $phasePill.textContent="Warm‑up"; }
   else if(state.phase==="workout"){ $sectionTitle.textContent=`Workout • Day ${state.selectedDay}`; $phasePill.textContent=`Workout (Day ${state.selectedDay})`; }
   else { $sectionTitle.textContent="Cool‑down"; $phasePill.textContent="Cool‑down"; }
 
-  // Timeline
   [...$timeline.querySelectorAll(".chip")].forEach(ch=>{
     const p=ch.getAttribute("data-phase");
     ch.classList.toggle("active", state.phase===p && state.started);
   });
 
-  // Mid choose-day
   $chooseDayMid.style.display = (state.started && state.phase==="workout") ? "inline-flex" : "none";
   $chooseDayMid.onclick = ()=> $dayDialog.showModal();
 
-  // Buttons
   $finish.style.display = (state.started && state.phase==="cooldown") ? "inline-flex" : "none";
   $next.textContent = state.phase==="warmup" ? "Choose Day → Start Workout" : state.phase==="workout" ? "Start Cool‑down" : "Finish Day";
 
-  // List
   const items=listForPhase();
   $list.innerHTML="";
   $empty.style.display = items.length ? "none":"block";
   $empty.textContent = items.length ? "" : "No activities defined.";
 
+  // Build list (secondary view)
   items.forEach((it,i)=>{
     const crossed=state.done[state.phase].includes(i);
-
-    const item=document.createElement("div");
-    item.className="item"+(crossed?" completed":"");
-
-    // Row 1
+    const item=document.createElement("div"); item.className="item"+(crossed?" completed":"");
     const head=document.createElement("div"); head.className="itemHead";
     const num=document.createElement("div"); num.className="num"; num.textContent=i+1;
     const labelWrap=document.createElement("div"); labelWrap.className="labelWrap";
     const label=document.createElement("div"); label.className="label"; label.textContent=it.name;
     labelWrap.appendChild(label); head.appendChild(num); head.appendChild(labelWrap);
 
-    // Row 2
     const controls=document.createElement("div"); controls.className="itemControls";
     const baseSecs=itemSeconds(state.phase,i,it.seconds); const hasTimer=(baseSecs||0)>0;
 
@@ -202,7 +207,7 @@ function render(){
       timer=document.createElement("div"); timer.className="timer";
       const key=activityKey(state.phase,i);
       const remainInit=(state.timers[key] ?? baseSecs);
-      timer.textContent=fmt(remainInit); updateTimerClass(timer,remainInit);
+      timer.textContent=fmt(remainInit);
       controls.appendChild(timer);
     }
 
@@ -210,7 +215,11 @@ function render(){
     startB.textContent=hasTimer?"Start":"Done";
     startB.onclick=()=>{
       if(!hasTimer){ markDone(state.phase,i); return; }
-      startTimer(state.phase,i,baseSecs, s=>{ if(timer){ timer.textContent=fmt(s); updateTimerClass(timer,s);} }, ()=>{ markDone(state.phase,i); });
+      startTimer(state.phase,i,baseSecs, s=>{
+        if(timer) timer.textContent=fmt(s);
+        // keep focus ring in sync if this is current index
+        if(i===state.index){ $ringText.textContent=fmt(s); updateRing(s,baseSecs); }
+      }, ()=>{ markDone(state.phase,i); });
     };
 
     const stopB=document.createElement("button"); stopB.className="btn ghost";
@@ -218,7 +227,8 @@ function render(){
     stopB.onclick=()=>{
       if(!hasTimer){ unmarkDone(state.phase,i); return; }
       stopTimer(state.phase,i);
-      if(timer){ timer.textContent=fmt(baseSecs); updateTimerClass(timer,baseSecs); }
+      if(timer){ timer.textContent=fmt(baseSecs); }
+      if(i===state.index){ $ringText.textContent=fmt(baseSecs); updateRing(baseSecs,baseSecs); }
     };
 
     const doneB=document.createElement("button"); doneB.className="btn";
@@ -234,33 +244,53 @@ function render(){
 
     // Long-press override
     let pressTimer=null;
-    const onDown=()=>{ pressTimer=setTimeout(()=> openQuickEdit(state.phase,i,baseSecs,timer),600); };
+    const onDown=()=>{ pressTimer=setTimeout(()=> openQuickEdit(state.phase,i,baseSecs,i===state.index),600); };
     const onUp=()=>{ clearTimeout(pressTimer); pressTimer=null; };
     item.addEventListener("pointerdown",onDown); item.addEventListener("pointerup",onUp); item.addEventListener("pointerleave",onUp);
 
     item.appendChild(head); item.appendChild(controls); $list.appendChild(item);
   });
+
+  renderFocus();
 }
 
-function openQuickEdit(phase, idx, current, timerEl){
-  const val=prompt("Set seconds for this activity (today only). Use 0 to remove timer:", String(current??0));
+function renderFocus(){
+  const items = listForPhase();
+  const i = Math.min(state.index, Math.max(0, items.length-1));
+  const prev = i>0 ? items[i-1] : null;
+  const next = i < items.length-1 ? items[i+1] : null;
+  $prevSmall.textContent = prev ? `Prev: ${prev.name}` : "Prev: —";
+  $nextSmall.textContent = next ? `Next: ${next.name}` : "Next: —";
+  const it = items[i];
+  $focusName.textContent = it ? it.name : "—";
+  let secs = 0, total = 0;
+  if(it){
+    const key = activityKey(state.phase, i);
+    total = itemSeconds(state.phase, i, it.seconds);
+    secs = state.timers[key] ?? total;
+  }
+  $ringText.textContent = fmt(secs);
+  updateRing(secs, total);
+}
+
+function openQuickEdit(phase, idx, current, isCurrent){
+  const val=prompt("Set seconds for this activity (today only). Use 0 to remove timer:", String(current ?? 0));
   if(val==null) return;
   const secs=Math.max(0,Math.floor(Number(val)||0)); const key=`${phase}:${idx}`;
   if(secs===0) delete state.overrides[key]; else state.overrides[key]=secs;
-  saveState(state); if(timerEl){ if(secs>0){ timerEl.style.display=""; timerEl.textContent=fmt(secs); updateTimerClass(timerEl,secs); } else { timerEl.style.display="none"; } }
+  saveState(state);
+  if(isCurrent){ $ringText.textContent=fmt(secs); updateRing(secs,secs); }
   render();
 }
 
-// ===== Settings (defensive) =====
+// ===== Settings =====
 function loadSettingsUI(){ if(!$wakeLockToggle) return;
   $wakeLockToggle.checked=!!state.settings.wakeLock;
   $voiceToggle.checked=!!state.settings.voice;
-  $restSecondsInput.value=state.settings.restSeconds??30;
 }
 function saveSettingsUI(){ if(!$wakeLockToggle) return;
   state.settings.wakeLock=$wakeLockToggle.checked;
   state.settings.voice=$voiceToggle.checked;
-  state.settings.restSeconds=Math.max(0, Math.floor(Number($restSecondsInput.value)||30));
   saveState(state);
 }
 
@@ -271,9 +301,8 @@ function route(){
   syncChipDay(); renderDays(); render();
 }
 
-// Global bindings (idempotent)
-$startWarmup?.addEventListener("click", startWarmup);
-$resetDay?.addEventListener("click", ()=>{ if(confirm("Reset today's progress?")){ clearRest(); releaseWakeLock();
+$("startWarmupBtn")?.addEventListener("click", startWarmup);
+$resetDay?.addEventListener("click", ()=>{ if(confirm("Reset today's progress?")){ for(const id of intervals.values()) clearTimeout(id); intervals.clear(); releaseWakeLock();
   state={...state, date:todayKey(), started:false, phase:"home", index:0, done:{warmup:[],workout:[],cooldown:[]}, timers:{}, overrides:{}}; saveState(state); route(); }});
 $resetCompleted?.addEventListener("click", ()=>{ if(confirm("Clear all completed days?")){ state.completedDays={}; saveState(state); renderDays(); }});
 $next?.addEventListener("click", advancePhase);
@@ -281,8 +310,20 @@ $finish?.addEventListener("click", finishDay);
 $prev?.addEventListener("click", prevActivity);
 $skip?.addEventListener("click", skipActivity);
 $chooseDayMid?.addEventListener("click", ()=> $dayDialog.showModal());
-$restSkip?.addEventListener("click", ()=> clearRest());
 $settingsBtn?.addEventListener("click", ()=>{ if($settingsDialog){ loadSettingsUI(); $settingsDialog.showModal(); }});
 $settingsDialog?.addEventListener("close", saveSettingsUI);
+
+// Focus controls
+$focusStart?.addEventListener("click", ()=>{
+  const items=listForPhase(); if(!items.length) return;
+  const i=state.index; const it=items[i]; const base=itemSeconds(state.phase,i,it.seconds);
+  if(base<=0){ markDone(state.phase,i); return; }
+  startTimer(state.phase,i,base, s=>{ $ringText.textContent=fmt(s); updateRing(s,base); }, ()=>{ markDone(state.phase,i); });
+});
+$focusStop?.addEventListener("click", ()=>{
+  const i=state.index; const items=listForPhase(); const it=items[i]; if(!it) return;
+  stopTimer(state.phase,i); const base=itemSeconds(state.phase,i,it.seconds); $ringText.textContent=fmt(base); updateRing(base,base);
+});
+$focusDone?.addEventListener("click", ()=>{ const i=state.index; markDone(state.phase,i); });
 
 route();
