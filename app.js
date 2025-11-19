@@ -1,5 +1,5 @@
 // ===== State (localStorage only) =====
-const KEY = "fitness.day.state.focus1";
+const KEY = "fitness.day.state.focus2";
 const todayKey = () => new Date().toISOString().slice(0,10);
 
 function loadState(){
@@ -77,9 +77,8 @@ async function requestWakeLock(){
 async function releaseWakeLock(){ try{ if(wakeLock){ await wakeLock.release(); wakeLock=null; } }catch{} }
 document.addEventListener("visibilitychange", async ()=>{
   if(document.visibilityState==="visible" && wakeLock){ try{ wakeLock = await navigator.wakeLock.request("screen"); }catch{} }
-}); // Re-acquire when visible [web:118][web:123]
+});
 
-// Ring helpers
 function updateRing(remain, total){
   total = Math.max(1, total||0);
   remain = Math.max(0, remain||0);
@@ -89,7 +88,7 @@ function updateRing(remain, total){
   $ringFg.style.strokeDasharray = `${C}`;
   $ringFg.style.strokeDashoffset = `${offset}`;
 }
-function updateTimerClassForVoice(remain){
+function voiceLast5(remain){
   if(remain<=5 && remain>=1) speak(String(remain));
 }
 
@@ -104,12 +103,9 @@ function startTimer(phase, idx, seconds, onTick, onDone){
   const tick=()=>{
     const remain=Math.max(0, Math.ceil((end-Date.now())/1000));
     if(remain!==last){
-      state.timers[key]=remain; onTick(remain); saveState(state); last=remain;
-      updateTimerClassForVoice(remain);
+      state.timers[key]=remain; onTick(remain); saveState(state); last=remain; voiceLast5(remain);
     }
-    if(remain<=0){
-      delete state.timers[key]; intervals.delete(key); onDone?.(); saveState(state); return;
-    }
+    if(remain<=0){ delete state.timers[key]; intervals.delete(key); onDone?.(); saveState(state); return; }
     const id=setTimeout(tick,200); intervals.set(key,id);
   };
   onTick(startRemain);
@@ -153,9 +149,35 @@ function finishDay(){
   saveState(state); showHome(); renderDays();
 }
 
-function markDone(phase, idx){
+function markDoneOnly(phase, idx){
   const arr=state.done[phase]; if(!arr.includes(idx)) arr.push(idx);
   saveState(state); render();
+}
+function doneAdvanceAndStart(){
+  const items=listForPhase(); if(!items.length) return;
+  const i=state.index;
+  // mark current done
+  markDoneOnly(state.phase, i);
+  // advance if possible
+  if(i < items.length - 1){
+    state.index = i + 1;
+    saveState(state);
+    // start next timer automatically if it has seconds
+    const nextIt = listForPhase()[state.index];
+    const nextSecs = itemSeconds(state.phase, state.index, nextIt.seconds);
+    $focusName.textContent = nextIt.name;
+    $ringText.textContent = fmt(nextSecs);
+    updateRing(nextSecs, nextSecs);
+    if(nextSecs > 0){
+      startTimer(state.phase, state.index, nextSecs, s=>{ 
+        $ringText.textContent=fmt(s); updateRing(s, nextSecs);
+      }, ()=>{ /* do nothing on auto; user will press Done to advance */ });
+    }
+    render(); // updates list and small cards
+  } else {
+    // no next item; keep index and let user advance phase
+    render();
+  }
 }
 function unmarkDone(phase, idx){ state.done[phase]=state.done[phase].filter(i=>i!==idx); saveState(state); render(); }
 
@@ -189,7 +211,7 @@ function render(){
   $empty.style.display = items.length ? "none":"block";
   $empty.textContent = items.length ? "" : "No activities defined.";
 
-  // Build list (secondary view)
+  // Build list
   items.forEach((it,i)=>{
     const crossed=state.done[state.phase].includes(i);
     const item=document.createElement("div"); item.className="item"+(crossed?" completed":"");
@@ -214,12 +236,11 @@ function render(){
     const startB=document.createElement("button"); startB.className="btn ghost";
     startB.textContent=hasTimer?"Start":"Done";
     startB.onclick=()=>{
-      if(!hasTimer){ markDone(state.phase,i); return; }
+      if(!hasTimer){ markDoneOnly(state.phase,i); return; }
       startTimer(state.phase,i,baseSecs, s=>{
         if(timer) timer.textContent=fmt(s);
-        // keep focus ring in sync if this is current index
         if(i===state.index){ $ringText.textContent=fmt(s); updateRing(s,baseSecs); }
-      }, ()=>{ markDone(state.phase,i); });
+      }, ()=>{ /* no auto-advance on finish */ });
     };
 
     const stopB=document.createElement("button"); stopB.className="btn ghost";
@@ -233,7 +254,7 @@ function render(){
 
     const doneB=document.createElement("button"); doneB.className="btn";
     doneB.textContent=crossed?"Undo":"Done";
-    doneB.onclick=()=> crossed ? unmarkDone(state.phase,i) : markDone(state.phase,i);
+    doneB.onclick=()=> crossed ? unmarkDone(state.phase,i) : (state.index=i, doneAdvanceAndStart());
 
     controls.appendChild(startB); controls.appendChild(stopB); controls.appendChild(doneB);
 
@@ -296,8 +317,8 @@ function saveSettingsUI(){ if(!$wakeLockToggle) return;
 
 // ===== Route and bind =====
 function route(){
-  if(!state.started || state.phase==="home"){ showHome(); }
-  else { showWork(); }
+  if(!state.started || state.phase==="home"){ $homeCard.style.display="block"; $workSection.style.display="none"; }
+  else { $homeCard.style.display="none"; $workSection.style.display="block"; }
   syncChipDay(); renderDays(); render();
 }
 
@@ -317,13 +338,16 @@ $settingsDialog?.addEventListener("close", saveSettingsUI);
 $focusStart?.addEventListener("click", ()=>{
   const items=listForPhase(); if(!items.length) return;
   const i=state.index; const it=items[i]; const base=itemSeconds(state.phase,i,it.seconds);
-  if(base<=0){ markDone(state.phase,i); return; }
-  startTimer(state.phase,i,base, s=>{ $ringText.textContent=fmt(s); updateRing(s,base); }, ()=>{ markDone(state.phase,i); });
+  if(base<=0){ doneAdvanceAndStart(); return; }
+  startTimer(state.phase,i,base, s=>{ $ringText.textContent=fmt(s); updateRing(s,base); }, ()=>{ /* no auto-advance on finish */ });
 });
 $focusStop?.addEventListener("click", ()=>{
   const i=state.index; const items=listForPhase(); const it=items[i]; if(!it) return;
   stopTimer(state.phase,i); const base=itemSeconds(state.phase,i,it.seconds); $ringText.textContent=fmt(base); updateRing(base,base);
 });
-$focusDone?.addEventListener("click", ()=>{ const i=state.index; markDone(state.phase,i); });
+$focusDone?.addEventListener("click", ()=>{
+  // When user presses Done in focus, advance and auto-start next if available
+  doneAdvanceAndStart();
+});
 
 route();
