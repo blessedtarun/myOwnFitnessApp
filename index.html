@@ -1,118 +1,655 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>My Fitness Day</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aesthetics Split Protocol</title>
+    <!-- Tailwind CSS for Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        /* Custom styles to prevent layout shifts */
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .hide { display: none !important; }
+    </style>
 </head>
-<body>
-  <div class="wrap">
-    <header class="bar">
-      <h1>My Fitness Day</h1>
-      <div class="row">
-        <button class="btn ghost" id="settingsBtn" title="Settings">Settings</button>
-        <button class="btn ghost" id="resetCompletedBtn" title="Clear completed days">Reset Completed Days</button>
-        <button class="btn ghost" id="resetDayBtn" title="Reset today">Reset Day</button>
-      </div>
-    </header>
+<body class="bg-zinc-950 text-zinc-50 font-sans selection:bg-yellow-400/50 selection:text-yellow-50 overflow-hidden">
 
-    <!-- Home: pick or view workout day 1-7 -->
-    <section class="card" id="homeCard">
-      <h2 class="sectionTitle">Select Workout Day</h2>
-      <p class="muted">Pick a day 1–7. Completed days are highlighted; you can change the day after warm‑up.</p>
-      <div class="daysGrid" id="daysGrid"></div>
-      <div class="row topPad">
-        <button class="btn block" id="startWarmupBtn">Start Warm‑up</button>
-      </div>
-    </section>
+    <!-- Main App Container -->
+    <div id="app" class="min-h-screen h-screen flex flex-col w-full overflow-hidden"></div>
 
-    <!-- Live timeline + focus + list -->
-    <section class="section" id="workSection" style="display:none">
-      <div class="card pad">
-        <div class="timeline" id="timeline">
-          <div class="chip" data-phase="warmup">Warm‑up</div>
-          <div class="chip" data-phase="workout">Workout (Day <span id="chipDay">1</span>)</div>
-          <div class="chip" data-phase="cooldown">Cool‑down</div>
-        </div>
+    <!-- Application Logic -->
+    <script>
+        // --- AUDIO ENGINE ---
+        const speak = (text) => {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); 
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 1.1; 
+                utterance.pitch = 1;
+                utterance.volume = 1;
+                window.speechSynthesis.speak(utterance);
+            }
+        };
 
-        <div class="row">
-          <span class="pill" id="phasePill">Warm‑up</span>
-          <button class="btn ghost" id="chooseDayMidBtn" style="display:none">Choose Day (1–7)</button>
-        </div>
-      </div>
+        const playChime = () => {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                
+                const ctx = new AudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                osc.connect(gain);
+                gain.connect(ctx.destination);
 
-      <h2 id="sectionTitle" class="sectionTitle">Warm‑up</h2>
+                const now = ctx.currentTime;
+                
+                osc.type = 'square'; 
+                osc.frequency.setValueAtTime(440, now); 
+                osc.frequency.exponentialRampToValueAtTime(880, now + 0.1); 
+                
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0.3, now + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+                
+                osc.start(now);
+                osc.stop(now + 1.0);
+            } catch (e) {
+                console.error("Audio play failed", e);
+            }
+        };
 
-      <!-- Focus view -->
-      <div class="focusWrap">
-        <div class="prevNextRow">
-          <div id="prevSmall" class="smallCard" aria-live="polite">Prev: —</div>
-          <div id="nextSmall" class="smallCard" aria-live="polite">Next: —</div>
-        </div>
+        // --- DATA STRUCTURE ---
+        const generateId = (prefix, index) => `${prefix}-${index}`;
 
-        <div class="focusCenter">
-          <div id="focusName" class="focusName">—</div>
-          <div class="ringTimer" id="ringTimer" role="img" aria-label="Timer">
-            <svg viewBox="0 0 120 120">
-              <circle cx="60" cy="60" r="54" class="ringBg"></circle>
-              <circle cx="60" cy="60" r="54" class="ringFg" id="ringFg"></circle>
-              <text x="60" y="66" text-anchor="middle" class="ringText" id="ringText">00:00</text>
-            </svg>
-          </div>
-          <div class="focusActions">
-            <button class="btn ghost" id="focusStart">Start</button>
-            <button class="btn ghost" id="focusStop">Stop</button>
-            <button class="btn" id="focusDone">Done</button>
-          </div>
-        </div>
-      </div>
+        const WEEKLY_PLAN = {
+            1: [
+                { name: "Machine Chest Press", duration: 0, reps: "3 x 8", description: "Controlled push." },
+                { name: "Incline Dumbbell Press", duration: 0, reps: "3 x 8", description: "Keep it light, focus on upper chest." },
+                { name: "Seated Shoulder Press Machine", duration: 0, reps: "3 x 8", description: "Shoulder strength." },
+                { name: "Dumbbell Lateral Raise", duration: 0, reps: "2 x 10", description: "Side delts." },
+                { name: "Rope Triceps Pushdown", duration: 0, reps: "2 x 10", description: "Triceps isolation." },
+                { name: "Plank (3 sets)", duration: 60, reps: 0, description: "3 sets of 20 seconds. Keep it tight." }
+            ],
+            2: [
+                { name: "Leg Press Machine", duration: 0, reps: "3 x 10", description: "Keep it light and controlled." },
+                { name: "Bodyweight Squat", duration: 0, reps: "3 x 8", description: "Focus on depth and form." },
+                { name: "Seated Leg Curl", duration: 0, reps: "3 x 10", description: "Hamstring curl." },
+                { name: "Leg Extension", duration: 0, reps: "2 x 10", description: "Quad extension." },
+                { name: "Standing Calf Raises", duration: 0, reps: "2 x 12", description: "Full stretch at bottom." },
+                { name: "Dead Bug (Left)", duration: 0, reps: "8 reps", description: "Core stability." },
+                { name: "Dead Bug (Right)", duration: 0, reps: "8 reps", description: "Core stability." }
+            ],
+            3: [
+                { name: "Lat Pulldown", duration: 0, reps: "3 x 8", description: "Pull down to chest." },
+                { name: "Seated Cable Row", duration: 0, reps: "3 x 8", description: "Squeeze back at the top." },
+                { name: "One-arm Dumbbell Row (L)", duration: 0, reps: "2 x 8", description: "Lats focus." },
+                { name: "One-arm Dumbbell Row (R)", duration: 0, reps: "2 x 8", description: "Lats focus." },
+                { name: "Face Pull", duration: 0, reps: "2 x 10", description: "Rear delts and posture." },
+                { name: "Dumbbell Curl", duration: 0, reps: "2 x 10", description: "Biceps." }
+            ],
+            4: [
+                { name: "Full Rest", duration: 0, reps: "Recover", description: "Sunday rest day. Let your muscles rebuild." }
+            ],
+            5: [
+                { name: "Goblet Squat", duration: 0, reps: "3 x 8", description: "Keep chest tall." },
+                { name: "Dumbbell Bench Press", duration: 0, reps: "3 x 8", description: "Full body strength push." },
+                { name: "Lat Pulldown", duration: 0, reps: "3 x 8", description: "Full body strength pull." },
+                { name: "Romanian Deadlift", duration: 0, reps: "2 x 8", description: "Very light weight. Hamstring stretch." },
+                { name: "Plank (3 sets)", duration: 75, reps: 0, description: "3 sets of 25 seconds." }
+            ],
+            6: [
+                { name: "Incline Walk", duration: 900, reps: 0, description: "15 minutes. Steady incline." },
+                { name: "Hanging Knee Raise", duration: 0, reps: "2 x 10", description: "Lower core." },
+                { name: "Russian Twist (Left)", duration: 0, reps: "10 reps", description: "Oblique twists." },
+                { name: "Russian Twist (Right)", duration: 0, reps: "10 reps", description: "Oblique twists." },
+                { name: "Back Extension", duration: 0, reps: "2 x 10", description: "Lower back strength." }
+            ],
+            7: [
+                { name: "Incline Pushups", duration: 0, reps: "2 x 10", description: "Optional light pump." },
+                { name: "Band / Light Shoulder Work", duration: 0, reps: "2 x 12", description: "Optional light pump." },
+                { name: "Light Bicep + Tricep Pump", duration: 0, reps: "2 x 12", description: "Optional light pump." },
+                { name: "Easy Walk", duration: 600, reps: 0, description: "10 minutes easy stroll." }
+            ]
+        };
 
-      <!-- Optional list view -->
-      <div class="listWrap">
-        <div id="list" class="list" aria-live="polite"></div>
-        <div id="empty" class="empty" style="display:none"></div>
-      </div>
+        // --- APP STATE ---
+        const state = {
+            view: 'HOME', // HOME, INTRO, WORKOUT, COMPLETED_SCREEN
+            completedDays: [],
+            activeDay: null,
+            currentExIndex: 0,
+            
+            // Timer state
+            targetDuration: 0,
+            timeLeft: 0,
+            isRunning: false,
+            isFinished: false,
+            timerInterval: null,
+            lastTick: -1,
+            
+            showDaySelector: false
+        };
 
-      <div class="footer">
-        <button class="btn secondary" id="prevBtn">Back</button>
-        <div class="row">
-          <button class="btn ghost" id="skipBtn">Skip</button>
-          <button class="btn warn" id="nextPhaseBtn">Start Workout</button>
-          <button class="btn" id="finishBtn" style="display:none">Finish Day</button>
-        </div>
-      </div>
-    </section>
-  </div>
+        const today = new Date().getDay() || 7;
 
-  <!-- Day picker dialog -->
-  <dialog id="dayDialog">
-    <form method="dialog" class="dialogCard">
-      <h3>Pick Workout Day (1–7)</h3>
-      <div class="daysGrid compact" id="dialogDays"></div>
-      <div class="row topPad">
-        <button class="btn" value="close">Close</button>
-      </div>
-    </form>
-  </dialog>
+        // --- CORE FUNCTIONS ---
 
-  <!-- Settings dialog -->
-  <dialog id="settingsDialog">
-    <form method="dialog" class="dialogCard">
-      <h3>Settings</h3>
-      <div class="settingRow">
-        <label><input type="checkbox" id="wakeLockToggle" /> Keep screen awake during timers</label>
-      </div>
-      <div class="settingRow">
-        <label><input type="checkbox" id="voiceToggle" /> Voice cues in last 5 seconds</label>
-      </div>
-      <div class="row topPad">
-        <button class="btn" value="close">Close</button>
-      </div>
-    </form>
-  </dialog>
+        function render() {
+            const app = document.getElementById('app');
+            let html = '';
 
-  <script src="data.js"></script>
-  <script src="app.js"></script>
+            if (state.view === 'HOME') {
+                html = getHomeHTML();
+            } else if (state.view === 'INTRO') {
+                html = getIntroHTML();
+            } else if (state.view === 'WORKOUT') {
+                html = getWorkoutHTML();
+            } else if (state.view === 'COMPLETED_SCREEN') {
+                html = getCompletedHTML();
+            }
+
+            app.innerHTML = html;
+            lucide.createIcons(); // Re-initialize icons after rendering HTML
+            
+            if (state.view === 'WORKOUT') {
+                updateTimerUI(); // Ensure timer starts with correct visual state
+            }
+        }
+
+        // Action Handlers
+        window.resetProgress = () => {
+            if(window.confirm('Wipe logs and restart?')) {
+                state.completedDays = [];
+                render();
+            }
+        };
+
+        window.startWorkout = (day) => {
+            state.activeDay = day;
+            state.currentExIndex = 0;
+            state.view = 'INTRO';
+            render();
+        };
+
+        window.startPhase = () => {
+            const exercise = WEEKLY_PLAN[state.activeDay][state.currentExIndex];
+            state.targetDuration = exercise.duration;
+            state.timeLeft = exercise.duration;
+            state.isRunning = false;
+            state.isFinished = false;
+            state.lastTick = -1;
+            state.view = 'WORKOUT';
+            render();
+        };
+
+        window.exitWorkout = () => {
+            stopTimer();
+            state.view = 'HOME';
+            state.showDaySelector = false;
+            render();
+        };
+
+        window.finishDay = () => {
+            if (!state.completedDays.includes(state.activeDay)) {
+                state.completedDays.push(state.activeDay);
+            }
+            state.view = 'COMPLETED_SCREEN';
+            render();
+        };
+
+        window.returnHome = () => {
+            state.view = 'HOME';
+            render();
+        };
+
+        window.toggleDaySelector = () => {
+            state.showDaySelector = !state.showDaySelector;
+            const selector = document.getElementById('day-selector-dropdown');
+            const chevron = document.getElementById('day-selector-chevron');
+            if (selector) {
+                if(state.showDaySelector) {
+                    selector.classList.remove('hide');
+                    chevron.classList.add('rotate-180');
+                } else {
+                    selector.classList.add('hide');
+                    chevron.classList.remove('rotate-180');
+                }
+            }
+        };
+
+        window.changeDay = (newDay) => {
+            state.activeDay = newDay;
+            state.showDaySelector = false;
+            state.currentExIndex = 0;
+            stopTimer();
+            state.view = 'INTRO';
+            render();
+        };
+
+        window.handleNext = () => {
+            const queue = WEEKLY_PLAN[state.activeDay];
+            stopTimer();
+            if (state.currentExIndex < queue.length - 1) {
+                state.currentExIndex++;
+                const exercise = queue[state.currentExIndex];
+                state.targetDuration = exercise.duration;
+                state.timeLeft = exercise.duration;
+                state.isRunning = false;
+                state.isFinished = false;
+                state.lastTick = -1;
+                render();
+            } else {
+                playChime();
+                window.finishDay();
+            }
+        };
+
+        window.handlePrev = () => {
+            if (state.currentExIndex > 0) {
+                stopTimer();
+                state.currentExIndex--;
+                const exercise = WEEKLY_PLAN[state.activeDay][state.currentExIndex];
+                state.targetDuration = exercise.duration;
+                state.timeLeft = exercise.duration;
+                state.isRunning = false;
+                state.isFinished = false;
+                state.lastTick = -1;
+                render();
+            }
+        };
+
+        // --- TIMER LOGIC ---
+        function stopTimer() {
+            if (state.timerInterval) {
+                clearInterval(state.timerInterval);
+                state.timerInterval = null;
+            }
+        }
+
+        window.toggleTimer = () => {
+            state.isRunning = !state.isRunning;
+            if (state.isRunning) {
+                stopTimer();
+                state.timerInterval = setInterval(tickTimer, 1000);
+            } else {
+                stopTimer();
+            }
+            render(); // update buttons
+        };
+
+        window.resetTimer = () => {
+            stopTimer();
+            state.isRunning = false;
+            state.timeLeft = state.targetDuration;
+            state.isFinished = false;
+            state.lastTick = -1;
+            render();
+        };
+
+        window.adjustTime = (event, seconds) => {
+            event.stopPropagation();
+            if (state.isRunning) return;
+            const newTarget = Math.max(5, state.targetDuration + seconds);
+            const diff = newTarget - state.targetDuration;
+            state.targetDuration = newTarget;
+            state.timeLeft = Math.max(0, state.timeLeft + diff);
+            updateTimerUI();
+        };
+
+        function tickTimer() {
+            if (state.timeLeft > 0) {
+                state.timeLeft--;
+                if (state.timeLeft <= 5 && state.timeLeft > 0 && state.timeLeft !== state.lastTick) {
+                    speak(state.timeLeft.toString());
+                    state.lastTick = state.timeLeft;
+                }
+                if (state.timeLeft === 0) {
+                    playChime();
+                    state.isRunning = false;
+                    state.isFinished = true;
+                    stopTimer();
+                    render(); // full render to show "Continue" button
+                    return;
+                }
+                updateTimerUI();
+            } else {
+                state.isRunning = false;
+                state.isFinished = true;
+                stopTimer();
+                render();
+            }
+        }
+
+        function formatTime(secs, isFinished, targetDuration) {
+            if (targetDuration < 60 && !isFinished) return secs; 
+            if (isFinished) return `<i data-lucide="check" class="w-16 h-16 text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] mx-auto"></i>`;
+            const m = Math.floor(secs / 60);
+            const s = secs % 60;
+            return `${m}:${s < 10 ? '0' : ''}${s}`;
+        }
+
+        function updateTimerUI() {
+            const textEl = document.getElementById('timer-text');
+            const circleEl = document.getElementById('timer-circle');
+            if (!textEl || !circleEl) return;
+
+            const radius = 100;
+            const stroke = 12;
+            const normalizedRadius = radius - stroke * 2;
+            const circumference = normalizedRadius * 2 * Math.PI;
+            
+            // Protect against NaN if targetDuration is 0
+            const dashOffset = state.targetDuration > 0 
+                ? circumference - (state.timeLeft / state.targetDuration) * circumference 
+                : circumference;
+
+            const isUrgent = state.timeLeft <= 5 && state.timeLeft > 0;
+            
+            if (state.isFinished) {
+                textEl.innerHTML = formatTime(state.timeLeft, true, state.targetDuration);
+                lucide.createIcons();
+                circleEl.setAttribute('class', 'stroke-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.8)] transition-all duration-300 ease-linear');
+            } else {
+                textEl.innerText = formatTime(state.timeLeft, false, state.targetDuration);
+                if (isUrgent) {
+                    textEl.className = `absolute flex items-center justify-center w-full h-full ${state.targetDuration >= 600 ? 'text-4xl md:text-5xl' : 'text-5xl md:text-7xl'} font-black tracking-tighter text-red-500 drop-shadow-[0_0_12px_rgba(239,68,68,0.8)]`;
+                    circleEl.setAttribute('class', 'stroke-red-500 drop-shadow-[0_0_12px_rgba(239,68,68,0.8)] transition-all duration-300 ease-linear');
+                } else {
+                    textEl.className = `absolute flex items-center justify-center w-full h-full ${state.targetDuration >= 600 ? 'text-4xl md:text-5xl' : 'text-5xl md:text-7xl'} font-black tracking-tighter text-zinc-50`;
+                    circleEl.setAttribute('class', 'stroke-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.8)] transition-all duration-300 ease-linear');
+                }
+            }
+            circleEl.style.strokeDashoffset = dashOffset;
+        }
+
+        // --- HTML TEMPLATES ---
+
+        function getHomeHTML() {
+            const pct = Math.round((state.completedDays.length / 7) * 100);
+            
+            let daysHTML = '';
+            for(let day=1; day<=7; day++) {
+                const isCompleted = state.completedDays.includes(day);
+                const isCurrent = day === today && !isCompleted;
+                
+                let dayTitle = "Training Day";
+                if (day === 1) dayTitle = "Push Focus";
+                if (day === 2) dayTitle = "Legs (Controlled)";
+                if (day === 3) dayTitle = "Pull Focus";
+                if (day === 4) dayTitle = "Rest Day";
+                if (day === 5) dayTitle = "Full Body";
+                if (day === 6) dayTitle = "Cardio & Core";
+                if (day === 7) dayTitle = "Optional Pump";
+
+                let btnClass = isCompleted 
+                    ? 'bg-zinc-950 opacity-40 hover:opacity-100 hover:bg-zinc-900' 
+                    : isCurrent 
+                        ? 'bg-zinc-900 hover:bg-white hover:text-black' 
+                        : 'bg-zinc-950 hover:bg-zinc-900 hover:text-yellow-400 hover:shadow-[inset_0_0_15px_rgba(250,204,21,0.15)]';
+                
+                let subtitleClass = isCurrent ? (isCompleted ? '' : 'text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.8)]') : 'text-zinc-500 group-hover:text-zinc-300';
+                let iconHTML = isCompleted 
+                    ? '<i data-lucide="check" class="w-8 h-8 text-yellow-400 group-hover:text-yellow-300 transition-colors drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]"></i>'
+                    : `<i data-lucide="arrow-up-right" class="w-8 h-8 transition-all duration-300 ${isCurrent ? 'text-yellow-400 group-hover:text-black transform translate-x-2 -translate-y-2 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]' : 'text-zinc-700 opacity-0 -translate-x-4 translate-y-4 group-hover:opacity-100 group-hover:translate-x-0 group-hover:translate-y-0 group-hover:text-yellow-400 group-hover:drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]'}"></i>`;
+
+                daysHTML += `
+                    <button onclick="window.startWorkout(${day})" class="group w-full flex items-center justify-between p-6 md:p-8 border-b border-zinc-800 transition-all duration-300 ${btnClass}">
+                        <div class="text-left flex flex-col">
+                            <span class="text-xs md:text-sm font-bold uppercase tracking-[0.2em] mb-1 md:mb-2 ${subtitleClass}">
+                                ${day === today ? 'Target: Today' : `Day 0${day}`}
+                            </span>
+                            <span class="text-2xl md:text-4xl font-black uppercase tracking-tighter ${isCompleted ? 'line-through decoration-zinc-600' : ''}">
+                                ${dayTitle}
+                            </span>
+                        </div>
+                        <div class="flex items-center">
+                            ${iconHTML}
+                        </div>
+                    </button>
+                `;
+            }
+
+            return `
+                <div class="flex-1 overflow-y-auto pb-24">
+                    <header class="p-6 md:p-12 border-b border-zinc-800">
+                        <div class="flex justify-between items-start mb-8 md:mb-16">
+                            <div>
+                                <h1 class="text-4xl md:text-7xl font-black uppercase tracking-tighter leading-none mb-2">
+                                    Aesthetics<br/>
+                                    <span class="bg-gradient-to-r from-yellow-200 via-yellow-400 to-amber-500 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(250,204,21,0.6)]">Split.</span>
+                                </h1>
+                                <p class="text-zinc-500 text-xs md:text-sm font-bold uppercase tracking-[0.2em] mt-4">Current Protocol // Custom Gym Split</p>
+                            </div>
+                            <button onclick="window.resetProgress()" class="text-zinc-600 hover:text-red-500 transition-colors" title="Reset Data">
+                                <i data-lucide="rotate-ccw" class="w-6 h-6"></i>
+                            </button>
+                        </div>
+                        <div class="mt-8">
+                            <div class="flex justify-between items-end mb-2">
+                                <span class="text-zinc-500 text-xs font-bold uppercase tracking-[0.3em]">Weekly Payload</span>
+                                <span class="text-4xl md:text-5xl font-black tracking-tighter">${state.completedDays.length}<span class="text-zinc-700">/7</span></span>
+                            </div>
+                            <div class="w-full h-2 md:h-4 bg-zinc-900 border border-zinc-800">
+                                <div class="h-full bg-gradient-to-r from-yellow-200 via-yellow-400 to-amber-500 shadow-[0_0_15px_rgba(250,204,21,0.5)] transition-all duration-1000 ease-out" style="width: ${pct}%"></div>
+                            </div>
+                        </div>
+                    </header>
+                    <main class="max-w-5xl mx-auto">
+                        <div class="px-6 py-4 border-b border-zinc-800 flex items-center gap-3">
+                            <div class="w-2 h-2 bg-yellow-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(250,204,21,1)]"></div>
+                            <span class="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">Execution Plan</span>
+                        </div>
+                        <div class="flex flex-col">
+                            ${daysHTML}
+                        </div>
+                    </main>
+                </div>
+            `;
+        }
+
+        function getIntroHTML() {
+            const dayId = state.activeDay;
+            let title = "WORKOUT";
+            if (dayId == 1) title = "PUSH";
+            if (dayId == 2) title = "LEGS";
+            if (dayId == 3) title = "PULL";
+            if (dayId == 4) title = "REST";
+            if (dayId == 5) title = "FULL BODY";
+            if (dayId == 6) title = "CARDIO & CORE";
+            if (dayId == 7) title = "OPTIONAL";
+
+            return `
+                <div class="absolute inset-0 z-40 bg-zinc-950 flex flex-col items-center justify-center p-8 text-center">
+                    <div class="animate-in fade-in slide-in-from-bottom-8 duration-700 w-full max-w-2xl">
+                        <h3 class="text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.8)] text-sm md:text-xl font-bold tracking-[0.3em] uppercase mb-4">Session Initiated</h3>
+                        <h1 class="text-zinc-50 text-7xl md:text-9xl font-black uppercase tracking-tighter leading-none mb-8 drop-shadow-2xl">
+                            ${title}
+                        </h1>
+                        <button onclick="window.startPhase()" class="w-full group relative p-6 md:p-8 bg-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6)] text-black text-2xl md:text-4xl font-black uppercase flex items-center justify-between hover:bg-yellow-300 transition-all">
+                            <span>${dayId == 4 ? 'BEGIN REST' : 'BEGIN'}</span>
+                            <i data-lucide="arrow-right" class="w-10 h-10 group-hover:translate-x-4 transition-transform"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getWorkoutHTML() {
+            const queue = WEEKLY_PLAN[state.activeDay];
+            const exercise = queue[state.currentExIndex];
+            const totalInQueue = queue.length;
+            const progressPercent = ((state.currentExIndex) / totalInQueue) * 100;
+            const hasTimer = exercise.duration > 0;
+
+            let daySelectorHTML = '';
+            [1,2,3,4,5,6,7].forEach(d => {
+                daySelectorHTML += `
+                    <button onclick="window.changeDay(${d})" class="px-6 py-4 text-left text-sm font-bold text-zinc-400 uppercase tracking-widest hover:bg-yellow-400 hover:text-black hover:shadow-[0_0_15px_rgba(250,204,21,0.5)] transition-all border-b border-zinc-800 last:border-0">
+                        Day ${d}
+                    </button>
+                `;
+            });
+
+            // Timer or Reps HTML
+            let displayHTML = '';
+            if (hasTimer) {
+                const radius = 100;
+                const stroke = 12;
+                const normalizedRadius = radius - stroke * 2;
+                
+                let controlsHTML = '';
+                if (!state.isRunning && !state.isFinished) {
+                    controlsHTML = `
+                        <div class="flex border border-zinc-800 rounded-md overflow-hidden mt-6 shadow-[0_0_15px_rgba(0,0,0,0.4)] animate-in fade-in slide-in-from-bottom-2">
+                           <button onclick="window.adjustTime(event, -60)" class="px-3 md:px-4 py-2 md:py-3 bg-zinc-950 text-zinc-500 hover:text-yellow-400 hover:bg-zinc-900 hover:shadow-[inset_0_0_10px_rgba(250,204,21,0.2)] transition-all text-[10px] md:text-xs font-black tracking-widest border-r border-zinc-800">-1M</button>
+                           <button onclick="window.adjustTime(event, -15)" class="px-3 md:px-4 py-2 md:py-3 bg-zinc-950 text-zinc-500 hover:text-yellow-400 hover:bg-zinc-900 hover:shadow-[inset_0_0_10px_rgba(250,204,21,0.2)] transition-all text-[10px] md:text-xs font-black tracking-widest border-r border-zinc-800">-15S</button>
+                           <div class="px-4 md:px-6 py-2 md:py-3 bg-zinc-900 text-zinc-300 text-[10px] md:text-xs font-bold tracking-[0.2em] flex items-center justify-center uppercase">Adjust</div>
+                           <button onclick="window.adjustTime(event, 15)" class="px-3 md:px-4 py-2 md:py-3 bg-zinc-950 text-zinc-500 hover:text-yellow-400 hover:bg-zinc-900 hover:shadow-[inset_0_0_10px_rgba(250,204,21,0.2)] transition-all text-[10px] md:text-xs font-black tracking-widest border-l border-zinc-800">+15S</button>
+                           <button onclick="window.adjustTime(event, 60)" class="px-3 md:px-4 py-2 md:py-3 bg-zinc-950 text-zinc-500 hover:text-yellow-400 hover:bg-zinc-900 hover:shadow-[inset_0_0_10px_rgba(250,204,21,0.2)] transition-all text-[10px] md:text-xs font-black tracking-widest border-l border-zinc-800">+1M</button>
+                        </div>
+                    `;
+                }
+
+                displayHTML = `
+                    <div onclick="window.toggleTimer()" class="cursor-pointer group w-full mt-4">
+                        <div class="relative flex items-center justify-center w-full max-w-[250px] aspect-square mx-auto">
+                            <svg height="100%" width="100%" viewBox="0 0 ${radius * 2} ${radius * 2}" class="transform -rotate-90">
+                                <circle stroke="#27272a" strokeWidth="${stroke}" fill="transparent" r="${normalizedRadius}" cx="${radius}" cy="${radius}" />
+                                <circle id="timer-circle" stroke="currentColor" class="stroke-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.8)] transition-all duration-300 ease-linear" strokeWidth="${stroke}" fill="transparent" r="${normalizedRadius}" cx="${radius}" cy="${radius}" strokeLinecap="butt" />
+                            </svg>
+                            <div id="timer-text" class="absolute flex items-center justify-center w-full h-full ${state.targetDuration >= 600 ? 'text-4xl md:text-5xl' : 'text-5xl md:text-7xl'} font-black tracking-tighter text-zinc-50">
+                                <!-- updated by JS -->
+                            </div>
+                        </div>
+                        <div class="text-center mt-8 text-xs font-bold opacity-40 uppercase tracking-widest group-hover:opacity-80 transition">
+                            ${state.isRunning ? 'Tap to Pause' : 'Tap to Start'}
+                        </div>
+                    </div>
+                    ${controlsHTML}
+                `;
+            } else {
+                displayHTML = `
+                    <div class="flex flex-col items-center justify-center mt-4">
+                        <span class="text-6xl md:text-8xl leading-none font-black bg-gradient-to-r from-yellow-200 via-yellow-400 to-amber-500 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(250,204,21,0.6)] tracking-tighter">
+                            ${exercise.reps}
+                        </span>
+                        <span class="text-xl md:text-2xl font-bold uppercase tracking-[0.2em] text-zinc-500 mt-6">
+                            Target
+                        </span>
+                    </div>
+                `;
+            }
+
+            // Main Action Button
+            let actionBtn = '';
+            if (hasTimer && !state.isFinished) {
+                let btnClasses = state.isRunning 
+                    ? "bg-zinc-100 text-black hover:bg-white shadow-[0_0_15px_rgba(255,255,255,0.4)]"
+                    : "bg-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6)] text-black hover:bg-yellow-300";
+                actionBtn = `
+                    <button onclick="window.toggleTimer()" class="col-span-2 flex items-center justify-center p-4 text-lg md:text-2xl font-black uppercase tracking-tighter transition-all ${btnClasses}">
+                        ${state.isRunning ? 'Pause' : 'Start Time'}
+                    </button>
+                `;
+            } else {
+                actionBtn = `
+                    <button onclick="window.handleNext()" class="col-span-2 flex items-center justify-center p-4 text-lg md:text-2xl font-black uppercase tracking-tighter transition-all bg-white text-black hover:bg-zinc-200 shadow-[0_0_15px_rgba(255,255,255,0.4)]">
+                        ${hasTimer ? 'Continue' : 'Complete'}
+                    </button>
+                `;
+            }
+
+            return `
+                <div class="absolute top-4 left-4 right-4 flex justify-between items-start z-50 pointer-events-none">
+                    <button onclick="window.exitWorkout()" class="pointer-events-auto bg-zinc-900 text-zinc-500 hover:text-white p-3 border border-zinc-800 transition-colors">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+
+                    <div class="pointer-events-auto relative">
+                        <button onclick="window.toggleDaySelector()" class="flex items-center gap-3 px-6 py-3 bg-zinc-900 border border-zinc-800 text-white font-bold text-sm tracking-widest uppercase hover:bg-zinc-800 transition-colors">
+                            <span>Switch Day</span>
+                            <i id="day-selector-chevron" data-lucide="chevron-down" class="w-4 h-4 transform transition ${state.showDaySelector ? 'rotate-180' : ''}"></i>
+                        </button>
+                        
+                        <div id="day-selector-dropdown" class="${state.showDaySelector ? '' : 'hide'} absolute top-full right-0 mt-2 w-48 bg-zinc-900 border border-zinc-800 flex flex-col shadow-[0_10px_30px_rgba(0,0,0,0.8)]">
+                            ${daySelectorHTML}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col h-full bg-zinc-950 text-zinc-50 relative overflow-hidden w-full pt-16">
+                    <div class="absolute top-0 left-0 h-1 md:h-2 bg-zinc-800 w-full z-20">
+                        <div class="h-full bg-gradient-to-r from-yellow-200 via-yellow-400 to-amber-500 shadow-[0_0_15px_rgba(250,204,21,0.6)] transition-all duration-500" style="width: ${progressPercent}%"></div>
+                    </div>
+
+                    <div class="pt-8 px-6 pb-2 flex justify-between items-center z-10 border-b border-zinc-900">
+                        <span class="text-zinc-500 text-xs md:text-sm font-bold tracking-[0.2em] uppercase">
+                            Exercise ${state.currentExIndex + 1} / ${totalInQueue}
+                        </span>
+                        <span class="text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.8)] text-[10px] md:text-sm font-bold tracking-[0.2em] uppercase">
+                            Aesthetics Split
+                        </span>
+                    </div>
+
+                    <div class="flex-1 flex flex-col z-10 p-6 md:p-8 overflow-y-auto justify-center">
+                        <div class="mb-8 text-center md:text-left">
+                            <h2 class="text-3xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter leading-none mb-4">
+                                ${exercise.name}
+                            </h2>
+                            <p class="text-zinc-400 text-sm md:text-lg font-medium max-w-2xl border-l-4 border-yellow-400 shadow-[-4px_0_15px_-4px_rgba(250,204,21,0.6)] pl-4 text-left">
+                                ${exercise.description}
+                            </p>
+                        </div>
+
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            ${displayHTML}
+                        </div>
+                    </div>
+
+                    <div class="w-full bg-zinc-900 border-t border-zinc-800 p-4 z-20 pb-8">
+                        <div class="grid grid-cols-4 gap-2 md:gap-4 max-w-4xl mx-auto">
+                            <button onclick="window.handlePrev()" class="col-span-1 flex items-center justify-center p-4 bg-zinc-950 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors uppercase font-bold text-xs tracking-widest">
+                                <i data-lucide="skip-back" class="w-6 h-6 md:mr-2"></i> <span class="hidden md:inline">Prev</span>
+                            </button>
+
+                            ${actionBtn}
+
+                            <button onclick="window.resetTimer()" class="col-span-1 flex items-center justify-center p-4 bg-zinc-950 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors uppercase font-bold text-xs tracking-widest">
+                                <i data-lucide="rotate-ccw" class="w-6 h-6 md:mr-2"></i> <span class="hidden md:inline">Reset</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getCompletedHTML() {
+            return `
+                <div class="min-h-screen bg-zinc-950 flex flex-col items-center justify-center text-white p-8 text-center w-full">
+                    <div class="animate-in fade-in slide-in-from-bottom-8 duration-500 flex flex-col items-center w-full max-w-xl">
+                        <div class="text-black p-8 mb-8 border-4 border-white bg-gradient-to-r from-yellow-200 via-yellow-400 to-amber-500 shadow-[0_0_40px_rgba(250,204,21,0.6)]">
+                            <i data-lucide="check" class="w-20 h-20" style="stroke-width: 3;"></i>
+                        </div>
+                        <h1 class="text-6xl md:text-8xl font-black uppercase tracking-tighter mb-6 drop-shadow-2xl">Obliterated</h1>
+                        <p class="text-zinc-500 text-xl md:text-2xl tracking-widest uppercase font-bold mb-12">Session Logged. Rest Up.</p>
+                        <button onclick="window.returnHome()" class="w-full bg-white text-black py-6 text-2xl font-black uppercase tracking-tighter hover:bg-yellow-400 hover:shadow-[0_0_20px_rgba(250,204,21,0.6)] transition-all">
+                            Return to Base
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Initialize App
+        window.onload = () => {
+            render();
+        };
+
+    </script>
 </body>
 </html>
