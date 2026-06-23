@@ -3,35 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simplified Aesthetics Protocol</title>
-    <!-- Tailwind CSS for Styling -->
+    <title>PLAYER SYSTEM UI</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <style>
-        /* Custom styles to prevent layout shifts */
-        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Rajdhani:wght@500;600;700&display=swap');
+        
+        body { 
+            font-family: 'Rajdhani', sans-serif; 
+            background-color: #050505;
+            color: #e4e4e7;
+        }
+        .font-system { font-family: 'JetBrains Mono', monospace; }
         .hide { display: none !important; }
-        /* Hide scrollbar for clean app-like feel */
         ::-webkit-scrollbar { display: none; }
         * { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Solo Leveling Glowing Panels */
+        .system-panel {
+            background: rgba(8, 14, 20, 0.85);
+            border: 1px solid rgba(34, 211, 238, 0.3);
+            box-shadow: inset 0 0 20px rgba(34, 211, 238, 0.05);
+            backdrop-filter: blur(10px);
+        }
+        
+        .system-panel-active {
+            background: rgba(12, 24, 40, 0.95);
+            border: 1px solid rgba(34, 211, 238, 0.8);
+            box-shadow: 0 0 15px rgba(34, 211, 238, 0.4), inset 0 0 20px rgba(34, 211, 238, 0.2);
+        }
+
+        .text-glow {
+            text-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+        }
     </style>
 </head>
-<body class="bg-zinc-950 text-zinc-50 font-sans selection:bg-yellow-400/50 selection:text-yellow-50 overflow-hidden">
+<body class="selection:bg-cyan-500/50 selection:text-cyan-50 overflow-hidden">
 
     <!-- Main App Container -->
-    <div id="app" class="h-[100dvh] min-h-[100dvh] flex flex-col w-full overflow-hidden"></div>
+    <div id="app" class="h-[100dvh] min-h-[100dvh] flex flex-col w-full overflow-hidden bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-black to-black"></div>
 
-    <!-- Application Logic -->
     <script>
-        // --- AUDIO ENGINE ---
         const speak = (text) => {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel(); 
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.rate = 1.1; 
-                utterance.pitch = 1;
+                utterance.pitch = 0.8; // Deeper, system-like voice
                 utterance.volume = 1;
                 window.speechSynthesis.speak(utterance);
             }
@@ -51,83 +70,84 @@
 
                 const now = ctx.currentTime;
                 
-                osc.type = 'square'; 
-                osc.frequency.setValueAtTime(440, now); 
-                osc.frequency.exponentialRampToValueAtTime(880, now + 0.1); 
+                // Digital System "Ping" sound
+                osc.type = 'sawtooth'; 
+                osc.frequency.setValueAtTime(880, now); 
+                osc.frequency.exponentialRampToValueAtTime(1760, now + 0.1); 
                 
                 gain.gain.setValueAtTime(0.1, now);
                 gain.gain.linearRampToValueAtTime(0.3, now + 0.05);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
                 
                 osc.start(now);
-                osc.stop(now + 1.0);
+                osc.stop(now + 0.5);
             } catch (e) {
                 console.error("Audio play failed", e);
             }
         };
 
-        // --- DATA STRUCTURE (SIMPLIFIED SPLIT) ---
         const generateId = (prefix, index) => `${prefix}-${index}`;
+
+        const WARMUP = [
+            { name: "Treadmill Walk", duration: 180, reps: 0, description: "SYSTEM WARMUP: 3 minutes steady." },
+            { name: "Arm Circles", duration: 20, reps: 0, description: "SYSTEM WARMUP: Joint mobility." },
+            { name: "Shoulder Rolls", duration: 20, reps: 0, description: "SYSTEM WARMUP: Forward/Back." },
+            { name: "Bodyweight Squats", duration: 0, reps: "10 reps", description: "SYSTEM WARMUP: Blood flow." },
+            { name: "Cat-Cow", duration: 0, reps: "10 reps", description: "SYSTEM WARMUP: Spinal mobility." }
+        ];
 
         const WEEKLY_PLAN = {
             1: [
-                { name: "Chest Press Machine", duration: 0, reps: "3 x 10", description: "Upper A: Push focus." },
-                { name: "Lat Pulldown", duration: 0, reps: "3 x 10", description: "Upper A: Pull focus." },
-                { name: "Shoulder Press Machine", duration: 0, reps: "3 x 10", description: "Upper A: Shoulders." },
-                { name: "Cable Row", duration: 0, reps: "3 x 10", description: "Upper A: Back thickness." },
-                { name: "Tricep Pushdown", duration: 0, reps: "2 x 12", description: "Upper A: Arms." },
-                { name: "Bicep Curl Machine", duration: 0, reps: "2 x 12", description: "Upper A: Arms." }
+                ...WARMUP,
+                { name: "Lat Pulldown", duration: 0, reps: "3 x 10", description: "Medium grip. Pull to upper chest. 2 sec down." },
+                { name: "Machine Chest Press", duration: 0, reps: "3 x 10", description: "Width Day. Control." },
+                { name: "Seated Cable Row", duration: 0, reps: "3 x 10", description: "Squeeze the back." },
+                { name: "Dumbbell Lateral Raise", duration: 0, reps: "3 x 15", description: "CRITICAL: Light weight, slight forward, elbows > wrists." },
+                { name: "Rope Tricep Pushdown", duration: 0, reps: "3 x 12", description: "Lockout at bottom." },
+                { name: "Dumbbell Curl", duration: 0, reps: "3 x 12", description: "Bicep isolation." }
             ],
             2: [
-                { name: "Leg Press", duration: 0, reps: "3 x 12", description: "Lower A: Quads/Glutes." },
-                { name: "Leg Curl", duration: 0, reps: "3 x 12", description: "Lower A: Hamstrings." },
-                { name: "Leg Extension", duration: 0, reps: "3 x 12", description: "Lower A: Quads burn." },
-                { name: "Standing Calf Raise", duration: 0, reps: "3 x 15", description: "Lower A: Full stretch." },
-                { name: "Plank (3 sets)", duration: 60, reps: 0, description: "Lower A: 3 x 20 sec." }
+                ...WARMUP,
+                { name: "Leg Press", duration: 0, reps: "3 x 12", description: "Lower body driver." },
+                { name: "Romanian Deadlift", duration: 0, reps: "2 x 10", description: "Light weight. Stretch hamstrings." },
+                { name: "Seated Leg Curl", duration: 0, reps: "3 x 12", description: "Hamstring contraction." },
+                { name: "Leg Extension", duration: 0, reps: "2 x 12", description: "Quad sweep." },
+                { name: "Standing Calf Raise", duration: 0, reps: "2 x 15", description: "ONLY TWO SETS." },
+                { name: "Plank (Set 1)", duration: 20, reps: 0, description: "Core engagement." },
+                { name: "Plank (Set 2)", duration: 20, reps: 0, description: "Core engagement." }
             ],
             3: [
-                { name: "Goblet Squat", duration: 0, reps: "3 x 10", description: "Full Body: Keep chest up." },
-                { name: "Dumbbell Bench Press", duration: 0, reps: "3 x 10", description: "Full Body: Push." },
-                { name: "Lat Pulldown", duration: 0, reps: "3 x 10", description: "Full Body: Pull." },
-                { name: "Romanian Deadlift", duration: 0, reps: "2 x 10", description: "Full Body: Light weight." },
-                { name: "Hanging Knee Raise", duration: 0, reps: "2 x 10", description: "Full Body: Core." }
+                { name: "Active Recovery", duration: 0, reps: "Walk", description: "No Gym. 10-20 min walk if possible." }
             ],
             4: [
-                { name: "Full Rest Day", duration: 0, reps: "Rest", description: "No gym. No home workout. No guilt." }
+                ...WARMUP,
+                { name: "Incline Dumbbell Press", duration: 0, reps: "3 x 10", description: "Upper chest focus." },
+                { name: "Lat Pulldown", duration: 0, reps: "3 x 10", description: "Lats." },
+                { name: "Shoulder Press Machine", duration: 0, reps: "2 x 10", description: "Don't overdo it. Fatigue quickly." },
+                { name: "Rear Delt Fly Machine", duration: 0, reps: "3 x 15", description: "EXTREMELY IMPORTANT." },
+                { name: "Cable Lateral Raise", duration: 0, reps: "3 x 12", description: "Constant tension." },
+                { name: "Hammer Curl", duration: 0, reps: "2 x 12", description: "Brachialis." },
+                { name: "Rope Pushdown", duration: 0, reps: "2 x 12", description: "Triceps." }
             ],
             5: [
-                { name: "Incline Chest Press", duration: 0, reps: "3 x 10", description: "Upper B: Machine press." },
-                { name: "Seated Cable Row", duration: 0, reps: "3 x 10", description: "Upper B: Back thickness." },
-                { name: "Dumbbell Lateral Raise", duration: 0, reps: "3 x 12", description: "Upper B: Side delts." },
-                { name: "Face Pull", duration: 0, reps: "3 x 12", description: "Upper B: Rear delts." },
-                { name: "Hammer Curl", duration: 0, reps: "2 x 12", description: "Upper B: Biceps/Forearms." },
-                { name: "Rope Pushdown", duration: 0, reps: "2 x 12", description: "Upper B: Triceps." }
+                ...WARMUP,
+                { name: "Lateral Raise", duration: 0, reps: "4 x 15", description: "GREEK GOD DAY. Shoulder width." },
+                { name: "Rear Delt Fly", duration: 0, reps: "4 x 15", description: "3D Delts." },
+                { name: "Incline Press", duration: 0, reps: "3 x 10", description: "Upper chest shelf." },
+                { name: "Cable Row", duration: 0, reps: "3 x 10", description: "Back thickness." },
+                { name: "Face Pull", duration: 0, reps: "3 x 15", description: "Shoulder health." },
+                { name: "Incline Walk", duration: 600, reps: 0, description: "10 minutes." }
             ],
             6: [
-                { name: "Leg Press", duration: 0, reps: "3 x 12", description: "Lower B: Heavy push." },
-                { name: "Walking Lunges", duration: 0, reps: "2 x 10", description: "Lower B: 10 each leg." },
-                { name: "Leg Curl", duration: 0, reps: "3 x 12", description: "Lower B: Hamstrings." },
-                { name: "Calf Raise", duration: 0, reps: "3 x 15", description: "Lower B: Controlled." },
-                { name: "Incline Walk", duration: 600, reps: 0, description: "Lower B: 10 mins cardio." }
+                ...WARMUP,
+                { name: "Incline Walk", duration: 900, reps: 0, description: "15 mins. Speed: 5-6 km/h, Inc: 5-10%." },
+                { name: "Hanging Knee Raise", duration: 0, reps: "2 x 10", description: "Lower core." },
+                { name: "Dead Bug", duration: 0, reps: "2 x 10", description: "10 per side." },
+                { name: "Bird Dog", duration: 0, reps: "2 x 10", description: "10 per side." },
+                { name: "Child Pose", duration: 60, reps: 0, description: "1 minute hold." }
             ],
             7: [
-                { name: "Sunday Rest", duration: 0, reps: "Recover", description: "Gym closed. Enjoy life." }
-            ],
-            'backup': [
-                { name: "Bodyweight Squats", duration: 0, reps: "20 reps", description: "Full Body: Lower" },
-                { name: "Incline Pushups", duration: 0, reps: "15 reps", description: "Full Body: Push (bed/table)" },
-                { name: "Reverse Lunges (Left)", duration: 0, reps: "15 reps", description: "Full Body: Legs" },
-                { name: "Reverse Lunges (Right)", duration: 0, reps: "15 reps", description: "Full Body: Legs" },
-                { name: "Glute Bridge", duration: 0, reps: "20 reps", description: "Full Body: Glutes/Core" },
-                { name: "Bird Dog (Left)", duration: 0, reps: "12 reps", description: "Full Body: Core" },
-                { name: "Bird Dog (Right)", duration: 0, reps: "12 reps", description: "Full Body: Core" },
-                { name: "Plank", duration: 45, reps: 0, description: "Full Body: Core Hold" },
-                { name: "Side Plank (Left)", duration: 30, reps: 0, description: "Full Body: Obliques" },
-                { name: "Side Plank (Right)", duration: 30, reps: 0, description: "Full Body: Obliques" },
-                { name: "Mountain Climbers", duration: 45, reps: 0, description: "Full Body: Cardio/Core" },
-                { name: "Bodyweight Squats", duration: 0, reps: "20 reps", description: "Full Body: Lower" },
-                { name: "Incline Pushups", duration: 0, reps: "15 reps", description: "Full Body: Push" },
-                { name: "Plank", duration: 45, reps: 0, description: "Full Body: Finisher" }
+                { name: "Rest Day", duration: 0, reps: "Rest", description: "Nothing. No guilt." }
             ]
         };
 
@@ -136,7 +156,6 @@
             WEEKLY_PLAN[day] = WEEKLY_PLAN[day].map((e, i) => ({ ...e, id: generateId(`d${day}`, i) }));
         });
 
-        // --- APP STATE ---
         const state = {
             view: 'HOME', // HOME, INTRO, WORKOUT, COMPLETED_SCREEN
             completedDays: [],
@@ -155,8 +174,6 @@
         };
 
         const today = new Date().getDay() || 7;
-
-        // --- CORE FUNCTIONS ---
 
         function render() {
             const app = document.getElementById('app');
@@ -180,9 +197,8 @@
             }
         }
 
-        // Action Handlers
         window.resetProgress = () => {
-            if(window.confirm('Wipe logs and restart?')) {
+            if(window.confirm('[ SYSTEM PROMPT: WIPE PLAYER CACHE? ]')) {
                 state.completedDays = [];
                 render();
             }
@@ -284,7 +300,6 @@
             }
         };
 
-        // --- TIMER LOGIC ---
         function stopTimer() {
             if (state.timerInterval) {
                 clearInterval(state.timerInterval);
@@ -348,7 +363,7 @@
 
         function formatTime(secs, isFinished, targetDuration) {
             if (targetDuration < 60 && !isFinished) return secs; 
-            if (isFinished) return `<i data-lucide="check" class="w-12 h-12 md:w-16 md:h-16 text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] mx-auto"></i>`;
+            if (isFinished) return `<i data-lucide="check" class="w-12 h-12 md:w-16 md:h-16 text-cyan-400 drop-shadow-[0_0_15px_rgba(34,211,238,0.8)] mx-auto"></i>`;
             const m = Math.floor(secs / 60);
             const s = secs % 60;
             return `${m}:${s < 10 ? '0' : ''}${s}`;
@@ -372,59 +387,55 @@
             if (state.isFinished) {
                 textEl.innerHTML = formatTime(state.timeLeft, true, state.targetDuration);
                 lucide.createIcons();
-                circleEl.setAttribute('class', 'stroke-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.8)] transition-all duration-300 ease-linear');
+                circleEl.setAttribute('class', 'stroke-cyan-400 drop-shadow-[0_0_12px_rgba(34,211,238,0.8)] transition-all duration-300 ease-linear');
             } else {
                 textEl.innerText = formatTime(state.timeLeft, false, state.targetDuration);
                 if (isUrgent) {
-                    textEl.className = `absolute flex items-center justify-center w-full h-full ${state.targetDuration >= 600 ? 'text-4xl md:text-5xl' : 'text-5xl md:text-7xl'} font-black tracking-tighter text-red-500 drop-shadow-[0_0_12px_rgba(239,68,68,0.8)]`;
+                    textEl.className = `absolute flex items-center justify-center w-full h-full ${state.targetDuration >= 600 ? 'text-4xl md:text-5xl' : 'text-5xl md:text-7xl'} font-system font-black tracking-tighter text-red-500 drop-shadow-[0_0_12px_rgba(239,68,68,0.8)]`;
                     circleEl.setAttribute('class', 'stroke-red-500 drop-shadow-[0_0_12px_rgba(239,68,68,0.8)] transition-all duration-300 ease-linear');
                 } else {
-                    textEl.className = `absolute flex items-center justify-center w-full h-full ${state.targetDuration >= 600 ? 'text-4xl md:text-5xl' : 'text-5xl md:text-7xl'} font-black tracking-tighter text-zinc-50`;
-                    circleEl.setAttribute('class', 'stroke-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.8)] transition-all duration-300 ease-linear');
+                    textEl.className = `absolute flex items-center justify-center w-full h-full ${state.targetDuration >= 600 ? 'text-4xl md:text-5xl' : 'text-5xl md:text-7xl'} font-system font-black tracking-tighter text-zinc-50`;
+                    circleEl.setAttribute('class', 'stroke-cyan-400 drop-shadow-[0_0_12px_rgba(34,211,238,0.8)] transition-all duration-300 ease-linear');
                 }
             }
             circleEl.style.strokeDashoffset = dashOffset;
         }
 
-        // --- HTML TEMPLATES ---
-
         function getHomeHTML() {
-            const standardCompleted = state.completedDays.filter(d => typeof d === 'number').length;
-            const pct = Math.round((standardCompleted / 7) * 100);
+            const pct = Math.round((state.completedDays.length / 7) * 100);
             
             let daysHTML = '';
             for(let day=1; day<=7; day++) {
                 const isCompleted = state.completedDays.includes(day);
                 const isCurrent = day === today && !isCompleted;
                 
-                let dayTitle = "Training Day";
-                if (day === 1) dayTitle = "Upper A";
-                if (day === 2) dayTitle = "Lower A";
-                if (day === 3) dayTitle = "Full Body";
-                if (day === 4) dayTitle = "Rest Day";
-                if (day === 5) dayTitle = "Upper B";
-                if (day === 6) dayTitle = "Lower B + Cardio";
-                if (day === 7) dayTitle = "Rest Day";
+                let dayTitle = "DAILY QUEST";
+                if (day === 1) dayTitle = "UPPER A (Width Day)";
+                if (day === 2) dayTitle = "LOWER BODY";
+                if (day === 3) dayTitle = "REST (Active)";
+                if (day === 4) dayTitle = "UPPER B";
+                if (day === 5) dayTitle = "GREEK GOD DAY";
+                if (day === 6) dayTitle = "CARDIO + CORE";
+                if (day === 7) dayTitle = "REST";
 
                 let btnClass = isCompleted 
-                    ? 'bg-zinc-950 opacity-40 hover:opacity-100 hover:bg-zinc-900' 
+                    ? 'system-panel opacity-40 hover:opacity-80' 
                     : isCurrent 
-                        ? 'bg-yellow-400 text-black shadow-[0_0_20px_rgba(250,204,21,0.5)] transform scale-[1.02] z-10 relative hover:bg-yellow-300' 
-                        : 'bg-zinc-950 hover:bg-zinc-900 hover:text-yellow-400 hover:shadow-[inset_0_0_15px_rgba(250,204,21,0.15)]';
+                        ? 'system-panel-active transform scale-[1.02] z-10 relative' 
+                        : 'system-panel hover:bg-cyan-900/40 hover:border-cyan-400';
                 
-                let subtitleClass = isCurrent ? 'text-black/70' : (isCompleted ? '' : 'text-zinc-500 group-hover:text-zinc-300');
-                let titleClass = isCurrent ? 'text-black' : (isCompleted ? 'text-zinc-500 line-through decoration-zinc-600' : 'text-white');
+                let subtitleClass = isCurrent ? 'text-cyan-400 text-glow' : 'text-zinc-500';
                 let iconHTML = isCompleted 
-                    ? '<i data-lucide="check" class="w-6 h-6 sm:w-8 sm:h-8 text-yellow-400 transition-colors drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]"></i>'
-                    : `<i data-lucide="${isCurrent ? 'play' : 'arrow-up-right'}" class="w-6 h-6 sm:w-8 sm:h-8 transition-all duration-300 ${isCurrent ? 'text-black fill-black' : 'text-zinc-700 opacity-0 -translate-x-2 translate-y-2 sm:-translate-x-4 sm:translate-y-4 group-hover:opacity-100 group-hover:translate-x-0 group-hover:translate-y-0 group-hover:text-yellow-400 group-hover:drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]'}"></i>`;
+                    ? '<i data-lucide="check" class="w-6 h-6 sm:w-8 sm:h-8 text-cyan-400 drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]"></i>'
+                    : `<i data-lucide="chevron-right" class="w-6 h-6 sm:w-8 sm:h-8 transition-all duration-300 ${isCurrent ? 'text-cyan-400 drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]' : 'text-zinc-600 group-hover:text-cyan-400'}"></i>`;
 
                 daysHTML += `
-                    <button onclick="window.startWorkout(${day})" class="group w-full flex items-center justify-between p-4 sm:p-6 md:p-8 border-b border-zinc-800 transition-all duration-300 ${btnClass}">
+                    <button onclick="window.startWorkout(${day})" class="group w-full flex items-center justify-between p-4 sm:p-6 mb-3 rounded-lg transition-all duration-300 ${btnClass}">
                         <div class="text-left flex flex-col">
-                            <span class="text-[10px] sm:text-xs md:text-sm font-bold uppercase tracking-[0.2em] mb-1 md:mb-2 ${subtitleClass}">
-                                ${day === today ? 'Target: Today' : `Day 0${day}`}
+                            <span class="font-system text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] mb-1 md:mb-2 ${subtitleClass}">
+                                ${isCompleted ? '[ CLEARED ]' : (isCurrent ? '[ URGENT QUEST ]' : `[ DAY 0${day} ]`)}
                             </span>
-                            <span class="text-xl sm:text-2xl md:text-4xl font-black uppercase tracking-tighter ${titleClass}">
+                            <span class="text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-wide text-zinc-100 ${isCompleted ? 'text-zinc-600' : ''}">
                                 ${dayTitle}
                             </span>
                         </div>
@@ -435,61 +446,39 @@
                 `;
             }
 
-            // Backup workout rendering
-            let backupCompleted = state.completedDays.includes('backup');
-            let backupBtnClass = backupCompleted
-                ? 'bg-zinc-950 opacity-40 hover:opacity-100 hover:bg-zinc-900 border-zinc-800'
-                : 'bg-zinc-900 border-t border-b border-dashed border-zinc-700 hover:border-yellow-400 hover:bg-zinc-950';
-
-            daysHTML += `
-                <div class="px-6 py-4 mt-4 flex items-center gap-3">
-                    <i data-lucide="shield-alert" class="w-4 h-4 text-yellow-500"></i>
-                    <span class="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">Contingency Plan</span>
-                </div>
-                <button onclick="window.startWorkout('backup')" class="group w-full flex items-center justify-between p-4 sm:p-6 md:p-8 transition-all duration-300 ${backupBtnClass}">
-                    <div class="text-left flex flex-col">
-                        <span class="text-[10px] sm:text-xs md:text-sm font-bold uppercase tracking-[0.2em] mb-1 md:mb-2 text-zinc-400 group-hover:text-yellow-400 transition-colors">
-                            Emergency Backup
-                        </span>
-                        <span class="text-xl sm:text-2xl md:text-4xl font-black uppercase tracking-tighter text-white ${backupCompleted ? 'line-through decoration-zinc-600 text-zinc-500' : ''}">
-                            Full Body Home
-                        </span>
-                    </div>
-                    <div class="flex items-center">
-                        ${backupCompleted ? '<i data-lucide="check" class="w-6 h-6 sm:w-8 sm:h-8 text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]"></i>' : '<i data-lucide="play" class="w-6 h-6 sm:w-8 sm:h-8 text-zinc-600 group-hover:text-yellow-400 transition-colors"></i>'}
-                    </div>
-                </button>
-            `;
-
             return `
-                <div class="flex-1 overflow-y-auto pb-12 w-full">
-                    <header class="p-6 md:p-12 border-b border-zinc-800 pt-10">
-                        <div class="flex justify-between items-start mb-8 md:mb-16">
+                <div class="flex-1 overflow-y-auto pb-12 w-full pt-10">
+                    <header class="p-6 md:px-12 md:py-8">
+                        <div class="flex justify-between items-start mb-6">
                             <div class="max-w-[80%]">
-                                <h1 class="text-4xl sm:text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none mb-2">
-                                    Simplified<br/>
-                                    <span class="bg-gradient-to-r from-yellow-200 via-yellow-400 to-amber-500 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(250,204,21,0.6)]">Split.</span>
+                                <p class="font-system text-cyan-500 text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] mb-2">[ SYSTEM MESSAGE ]</p>
+                                <h1 class="text-4xl sm:text-5xl md:text-6xl font-black uppercase tracking-tighter leading-none mb-2 text-zinc-100 text-glow">
+                                    PLAYER<br/>LEVELING
                                 </h1>
-                                <p class="text-zinc-500 text-[10px] sm:text-xs md:text-sm font-bold uppercase tracking-[0.2em] mt-4">Current Protocol // 5-Day Lift Focus</p>
                             </div>
-                            <button onclick="window.resetProgress()" class="text-zinc-600 hover:text-red-500 transition-colors p-2" title="Reset Data">
-                                <i data-lucide="rotate-ccw" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+                            <button onclick="window.resetProgress()" class="system-panel p-3 text-cyan-500 hover:text-cyan-300 hover:bg-cyan-900/30 rounded transition-colors border border-cyan-500/30" title="Reset Cache">
+                                <i data-lucide="power" class="w-5 h-5 sm:w-6 sm:h-6"></i>
                             </button>
                         </div>
-                        <div class="mt-8">
-                            <div class="flex justify-between items-end mb-2">
-                                <span class="text-zinc-500 text-[10px] sm:text-xs font-bold uppercase tracking-[0.3em]">Weekly Payload</span>
-                                <span class="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter">${standardCompleted}<span class="text-zinc-700">/7</span></span>
+                        
+                        <div class="system-panel p-4 rounded-lg mt-8 border border-cyan-500/40 relative overflow-hidden">
+                            <div class="absolute right-0 top-0 opacity-10 pointer-events-none">
+                                <i data-lucide="zap" class="w-32 h-32 text-cyan-400"></i>
                             </div>
-                            <div class="w-full h-1 sm:h-2 md:h-4 bg-zinc-900 border border-zinc-800">
-                                <div class="h-full bg-gradient-to-r from-yellow-200 via-yellow-400 to-amber-500 shadow-[0_0_15px_rgba(250,204,21,0.5)] transition-all duration-1000 ease-out" style="width: ${pct}%"></div>
+                            <div class="flex justify-between items-end mb-2 relative z-10">
+                                <span class="font-system text-cyan-500 text-[10px] sm:text-xs font-bold uppercase tracking-[0.3em]">WEEKLY EXP</span>
+                                <span class="font-system text-2xl sm:text-3xl font-black text-cyan-400 text-glow">${pct}%</span>
+                            </div>
+                            <div class="w-full h-1 sm:h-2 bg-zinc-900 border border-zinc-800 relative z-10">
+                                <div class="h-full bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.8)] transition-all duration-1000 ease-out" style="width: ${pct}%"></div>
                             </div>
                         </div>
                     </header>
-                    <main class="max-w-5xl mx-auto">
-                        <div class="px-6 py-3 sm:py-4 border-b border-zinc-800 flex items-center gap-3">
-                            <div class="w-2 h-2 bg-yellow-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(250,204,21,1)]"></div>
-                            <span class="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">Execution Plan</span>
+                    
+                    <main class="max-w-5xl mx-auto px-6">
+                        <div class="py-4 flex items-center gap-3">
+                            <div class="w-2 h-2 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,211,238,1)]"></div>
+                            <span class="font-system text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-cyan-500">QUEST LOG</span>
                         </div>
                         <div class="flex flex-col">
                             ${daysHTML}
@@ -501,31 +490,17 @@
 
         function getIntroHTML() {
             const dayId = state.activeDay;
-            let title = "WORKOUT";
-            if (dayId == 1) title = "UPPER A";
-            if (dayId == 2) title = "LOWER A";
-            if (dayId == 3) title = "FULL BODY";
-            if (dayId == 4) title = "REST";
-            if (dayId == 5) title = "UPPER B";
-            if (dayId == 6) title = "LOWER B";
-            if (dayId == 7) title = "REST";
-            if (dayId === 'backup') title = "HOME FULL BODY";
-
-            let dayLabel = dayId === 'backup' ? "CONTINGENCY" : `DAY 0${dayId}`;
-
+            
             return `
-                <div class="flex-1 flex flex-col bg-zinc-950 items-center justify-center p-6 sm:p-8 text-center h-full w-full z-40">
-                    <div class="animate-in fade-in slide-in-from-bottom-8 duration-700 w-full max-w-2xl">
-                        <h3 class="text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.8)] text-xs sm:text-sm md:text-xl font-bold tracking-[0.3em] uppercase mb-4">Session Initiated</h3>
-                        <h1 class="text-zinc-50 text-5xl sm:text-7xl md:text-9xl font-black uppercase tracking-tighter leading-none mb-4 drop-shadow-2xl">
-                            ${title}
+                <div class="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 text-center h-full w-full z-40">
+                    <div class="system-panel-active p-8 rounded-xl animate-in fade-in zoom-in-95 duration-500 w-full max-w-lg border border-cyan-400">
+                        <i data-lucide="zap" class="w-16 h-16 sm:w-20 sm:h-20 text-cyan-400 mx-auto mb-6 text-glow animate-pulse"></i>
+                        <h3 class="font-system text-cyan-500 text-xs sm:text-sm font-bold tracking-[0.3em] uppercase mb-4">[ QUEST ACCEPTED ]</h3>
+                        <h1 class="text-white text-5xl sm:text-7xl font-black uppercase tracking-tighter leading-none mb-8 text-glow">
+                            ARISE.
                         </h1>
-                        <h2 class="text-zinc-600 text-xl sm:text-3xl font-black uppercase tracking-widest mb-12">
-                            ${dayLabel}
-                        </h2>
-                        <button onclick="window.startPhase()" class="w-full group relative p-4 sm:p-6 md:p-8 bg-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6)] text-black text-xl sm:text-2xl md:text-4xl font-black uppercase flex items-center justify-between hover:bg-yellow-300 transition-all">
-                            <span>${(dayId == 4 || dayId == 7) ? 'BEGIN REST' : 'BEGIN PHASE'}</span>
-                            <i data-lucide="arrow-right" class="w-8 h-8 sm:w-10 sm:h-10 group-hover:translate-x-2 sm:group-hover:translate-x-4 transition-transform"></i>
+                        <button onclick="window.startPhase()" class="w-full group relative p-4 bg-cyan-500 shadow-[0_0_20px_rgba(34,211,238,0.6)] text-black text-xl sm:text-2xl font-black uppercase flex items-center justify-center gap-4 hover:bg-cyan-400 transition-all rounded">
+                            <span>ENTER DUNGEON</span>
                         </button>
                     </div>
                 </div>
@@ -540,17 +515,14 @@
             const hasTimer = exercise.duration > 0;
 
             let daySelectorHTML = '';
-            [1,2,3,4,5,6,7,'backup'].forEach(d => {
-                let label = d === 'backup' ? 'Home Backup' : `Day ${d}`;
-                let arg = d === 'backup' ? "'backup'" : d;
+            [1,2,3,4,5,6,7].forEach(d => {
                 daySelectorHTML += `
-                    <button onclick="window.changeDay(${arg})" class="px-4 sm:px-6 py-3 text-left text-xs font-bold text-zinc-400 uppercase tracking-widest hover:bg-yellow-400 hover:text-black hover:shadow-[0_0_15px_rgba(250,204,21,0.5)] transition-all border-b border-zinc-800 last:border-0 w-full">
-                        ${label}
+                    <button onclick="window.changeDay(${d})" class="px-4 sm:px-6 py-3 text-left font-system text-xs font-bold text-cyan-500 uppercase tracking-widest hover:bg-cyan-900/50 hover:text-cyan-300 transition-all border-b border-cyan-900/30 last:border-0 w-full">
+                        [ DAY ${d} ]
                     </button>
                 `;
             });
 
-            // Timer or Reps HTML
             let displayHTML = '';
             if (hasTimer) {
                 const radius = 100;
@@ -560,12 +532,12 @@
                 let controlsHTML = '';
                 if (!state.isRunning && !state.isFinished) {
                     controlsHTML = `
-                        <div class="flex border border-zinc-800 rounded-md overflow-hidden mt-6 shadow-[0_0_15px_rgba(0,0,0,0.4)] animate-in fade-in slide-in-from-bottom-2 max-w-full w-auto mx-auto justify-center">
-                           <button onclick="window.adjustTime(event, -60)" class="px-2 sm:px-3 md:px-4 py-2 sm:py-3 bg-zinc-950 text-zinc-500 hover:text-yellow-400 hover:bg-zinc-900 hover:shadow-[inset_0_0_10px_rgba(250,204,21,0.2)] transition-all text-[9px] sm:text-[10px] md:text-xs font-black tracking-widest border-r border-zinc-800 flex-1">-1M</button>
-                           <button onclick="window.adjustTime(event, -15)" class="px-2 sm:px-3 md:px-4 py-2 sm:py-3 bg-zinc-950 text-zinc-500 hover:text-yellow-400 hover:bg-zinc-900 hover:shadow-[inset_0_0_10px_rgba(250,204,21,0.2)] transition-all text-[9px] sm:text-[10px] md:text-xs font-black tracking-widest border-r border-zinc-800 flex-1">-15S</button>
-                           <div class="px-2 sm:px-4 md:px-6 py-2 sm:py-3 bg-zinc-900 text-zinc-300 text-[9px] sm:text-[10px] md:text-xs font-bold tracking-[0.2em] flex items-center justify-center uppercase whitespace-nowrap">Adjust</div>
-                           <button onclick="window.adjustTime(event, 15)" class="px-2 sm:px-3 md:px-4 py-2 sm:py-3 bg-zinc-950 text-zinc-500 hover:text-yellow-400 hover:bg-zinc-900 hover:shadow-[inset_0_0_10px_rgba(250,204,21,0.2)] transition-all text-[9px] sm:text-[10px] md:text-xs font-black tracking-widest border-l border-zinc-800 flex-1">+15S</button>
-                           <button onclick="window.adjustTime(event, 60)" class="px-2 sm:px-3 md:px-4 py-2 sm:py-3 bg-zinc-950 text-zinc-500 hover:text-yellow-400 hover:bg-zinc-900 hover:shadow-[inset_0_0_10px_rgba(250,204,21,0.2)] transition-all text-[9px] sm:text-[10px] md:text-xs font-black tracking-widest border-l border-zinc-800 flex-1">+1M</button>
+                        <div class="flex system-panel rounded overflow-hidden mt-6 mx-auto justify-center max-w-sm border border-cyan-500/30">
+                           <button onclick="window.adjustTime(event, -60)" class="px-3 py-2 bg-transparent text-cyan-600 hover:text-cyan-400 hover:bg-cyan-900/30 font-system text-[10px] font-bold border-r border-cyan-900/50">-1M</button>
+                           <button onclick="window.adjustTime(event, -15)" class="px-3 py-2 bg-transparent text-cyan-600 hover:text-cyan-400 hover:bg-cyan-900/30 font-system text-[10px] font-bold border-r border-cyan-900/50">-15S</button>
+                           <div class="px-4 py-2 bg-cyan-950/50 text-cyan-500 font-system text-[10px] font-bold tracking-[0.2em] flex items-center justify-center uppercase">T-ADJ</div>
+                           <button onclick="window.adjustTime(event, 15)" class="px-3 py-2 bg-transparent text-cyan-600 hover:text-cyan-400 hover:bg-cyan-900/30 font-system text-[10px] font-bold border-l border-cyan-900/50">+15S</button>
+                           <button onclick="window.adjustTime(event, 60)" class="px-3 py-2 bg-transparent text-cyan-600 hover:text-cyan-400 hover:bg-cyan-900/30 font-system text-[10px] font-bold border-l border-cyan-900/50">+1M</button>
                         </div>
                     `;
                 }
@@ -574,15 +546,14 @@
                     <div onclick="window.toggleTimer()" class="cursor-pointer group w-full mt-2 sm:mt-4 flex flex-col items-center">
                         <div class="relative flex items-center justify-center w-full max-w-[200px] sm:max-w-[250px] aspect-square mx-auto">
                             <svg height="100%" width="100%" viewBox="0 0 ${radius * 2} ${radius * 2}" class="transform -rotate-90">
-                                <circle stroke="#27272a" strokeWidth="${stroke}" fill="transparent" r="${normalizedRadius}" cx="${radius}" cy="${radius}" />
-                                <circle id="timer-circle" stroke="currentColor" class="stroke-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.8)] transition-all duration-300 ease-linear" strokeWidth="${stroke}" fill="transparent" r="${normalizedRadius}" cx="${radius}" cy="${radius}" strokeLinecap="butt" />
+                                <circle stroke="rgba(34,211,238,0.1)" strokeWidth="${stroke}" fill="transparent" r="${normalizedRadius}" cx="${radius}" cy="${radius}" />
+                                <circle id="timer-circle" stroke="currentColor" class="stroke-cyan-400 drop-shadow-[0_0_12px_rgba(34,211,238,0.8)] transition-all duration-300 ease-linear" strokeWidth="${stroke}" fill="transparent" r="${normalizedRadius}" cx="${radius}" cy="${radius}" strokeLinecap="butt" />
                             </svg>
-                            <div id="timer-text" class="absolute flex items-center justify-center w-full h-full ${state.targetDuration >= 600 ? 'text-4xl sm:text-5xl' : 'text-5xl sm:text-6xl md:text-7xl'} font-black tracking-tighter text-zinc-50">
-                                <!-- updated by JS -->
+                            <div id="timer-text" class="absolute flex items-center justify-center w-full h-full ${state.targetDuration >= 600 ? 'text-4xl sm:text-5xl' : 'text-5xl sm:text-6xl md:text-7xl'} font-system font-black tracking-tighter text-zinc-50">
                             </div>
                         </div>
-                        <div class="text-center mt-4 sm:mt-8 text-[10px] sm:text-xs font-bold opacity-40 uppercase tracking-widest group-hover:opacity-80 transition">
-                            ${state.isRunning ? 'Tap to Pause' : 'Tap to Start'}
+                        <div class="text-center mt-4 sm:mt-8 font-system text-[10px] sm:text-xs font-bold text-cyan-600 uppercase tracking-widest group-hover:text-cyan-400 transition">
+                            [ ${state.isRunning ? 'SYSTEM: RUNNING' : 'SYSTEM: PAUSED'} ]
                         </div>
                     </div>
                     ${controlsHTML}
@@ -590,97 +561,98 @@
             } else {
                 displayHTML = `
                     <div class="flex flex-col items-center justify-center mt-2 sm:mt-4">
-                        <span class="text-6xl sm:text-7xl md:text-8xl leading-none font-black bg-gradient-to-r from-yellow-200 via-yellow-400 to-amber-500 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(250,204,21,0.6)] tracking-tighter text-center">
+                        <span class="font-system text-6xl sm:text-7xl md:text-8xl leading-none font-black text-cyan-400 text-glow tracking-tighter text-center">
                             ${exercise.reps}
                         </span>
-                        <span class="text-lg sm:text-xl md:text-2xl font-bold uppercase tracking-[0.2em] text-zinc-500 mt-4 sm:mt-6">
-                            Target
+                        <span class="font-system text-sm sm:text-base font-bold uppercase tracking-[0.2em] text-cyan-600 mt-4 sm:mt-6">
+                            [ TARGET REP RANGE ]
                         </span>
                     </div>
                 `;
             }
 
-            // Main Action Button
             let actionBtn = '';
             if (hasTimer && !state.isFinished) {
                 let btnClasses = state.isRunning 
-                    ? "bg-zinc-100 text-black hover:bg-white shadow-[0_0_15px_rgba(255,255,255,0.4)]"
-                    : "bg-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6)] text-black hover:bg-yellow-300";
+                    ? "bg-transparent border border-cyan-500 text-cyan-400 hover:bg-cyan-900/30"
+                    : "bg-cyan-500 shadow-[0_0_20px_rgba(34,211,238,0.6)] text-black hover:bg-cyan-400";
                 actionBtn = `
-                    <button onclick="window.toggleTimer()" class="col-span-2 flex items-center justify-center p-3 sm:p-4 text-base sm:text-lg md:text-2xl font-black uppercase tracking-tighter transition-all ${btnClasses}">
-                        ${state.isRunning ? 'Pause' : 'Start'}
+                    <button onclick="window.toggleTimer()" class="col-span-2 flex items-center justify-center p-3 sm:p-4 text-base sm:text-lg font-system font-bold uppercase tracking-tighter transition-all rounded ${btnClasses}">
+                        ${state.isRunning ? '[ PAUSE ]' : '[ INITIATE ]'}
                     </button>
                 `;
             } else {
                 actionBtn = `
-                    <button onclick="window.handleNext()" class="col-span-2 flex items-center justify-center p-3 sm:p-4 text-base sm:text-lg md:text-2xl font-black uppercase tracking-tighter transition-all bg-white text-black hover:bg-zinc-200 shadow-[0_0_15px_rgba(255,255,255,0.4)]">
-                        ${hasTimer ? 'Continue' : 'Complete'}
+                    <button onclick="window.handleNext()" class="col-span-2 flex items-center justify-center p-3 sm:p-4 text-base sm:text-lg font-system font-bold uppercase tracking-tighter transition-all bg-cyan-400 text-black hover:bg-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.6)] rounded">
+                        [ ${hasTimer ? 'PROCEED' : 'CLEAR'} ]
                     </button>
                 `;
             }
 
             return `
-                <div class="flex flex-col h-full bg-zinc-950 text-zinc-50 relative w-full overflow-hidden">
+                <div class="flex flex-col h-full relative w-full overflow-hidden">
                     <!-- Progress Bar -->
-                    <div class="absolute top-0 left-0 h-1 md:h-2 bg-zinc-800 w-full z-20">
-                        <div class="h-full bg-gradient-to-r from-yellow-200 via-yellow-400 to-amber-500 shadow-[0_0_15px_rgba(250,204,21,0.6)] transition-all duration-500" style="width: ${progressPercent}%"></div>
+                    <div class="absolute top-0 left-0 h-1 bg-zinc-900 w-full z-20">
+                        <div class="h-full bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.8)] transition-all duration-500" style="width: ${progressPercent}%"></div>
                     </div>
 
-                    <!-- Top Navigation inside flow -->
+                    <!-- Top Navigation -->
                     <div class="w-full flex justify-between items-start z-40 p-4 pt-6">
-                        <button onclick="window.exitWorkout()" class="bg-zinc-900 text-zinc-500 hover:text-white p-2 sm:p-3 border border-zinc-800 transition-colors">
-                            <i data-lucide="x" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+                        <button onclick="window.exitWorkout()" class="system-panel text-cyan-500 hover:text-cyan-300 p-2 sm:p-3 rounded transition-colors">
+                            <i data-lucide="log-out" class="w-5 h-5 sm:w-6 sm:h-6"></i>
                         </button>
 
                         <div class="relative">
-                            <button onclick="window.toggleDaySelector()" class="flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2 sm:py-3 bg-zinc-900 border border-zinc-800 text-white font-bold text-[10px] sm:text-sm tracking-widest uppercase hover:bg-zinc-800 transition-colors">
-                                <span>Switch Day</span>
+                            <button onclick="window.toggleDaySelector()" class="flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2 sm:py-3 system-panel text-cyan-400 font-system font-bold text-[10px] sm:text-sm tracking-widest uppercase hover:bg-cyan-900/30 rounded transition-colors">
+                                <span>SYSTEM MENU</span>
                                 <i id="day-selector-chevron" data-lucide="chevron-down" class="w-3 h-3 sm:w-4 sm:h-4 transform transition ${state.showDaySelector ? 'rotate-180' : ''}"></i>
                             </button>
                             
-                            <div id="day-selector-dropdown" class="${state.showDaySelector ? '' : 'hide'} absolute top-full right-0 mt-2 w-48 sm:w-56 bg-zinc-900 border border-zinc-800 flex flex-col shadow-[0_10px_30px_rgba(0,0,0,0.8)] z-50 max-h-[60vh] overflow-y-auto">
+                            <div id="day-selector-dropdown" class="${state.showDaySelector ? '' : 'hide'} absolute top-full right-0 mt-2 w-48 sm:w-56 system-panel rounded flex flex-col shadow-[0_10px_30px_rgba(0,0,0,0.8)] z-50 max-h-[60vh] overflow-y-auto">
                                 ${daySelectorHTML}
                             </div>
                         </div>
                     </div>
 
-                    <!-- Header Info -->
-                    <div class="px-4 sm:px-6 pb-2 flex justify-between items-center z-10 border-b border-zinc-900 mt-4">
-                        <span class="text-zinc-500 text-[10px] sm:text-xs md:text-sm font-bold tracking-[0.2em] uppercase">
-                            Exercise ${state.currentExIndex + 1} / ${totalInQueue}
-                        </span>
-                        <span class="text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.8)] text-[9px] sm:text-[10px] md:text-sm font-bold tracking-[0.2em] uppercase">
-                            SIMPLIFIED SPLIT
-                        </span>
-                    </div>
-
                     <!-- Main Content Area -->
                     <div class="flex-1 flex flex-col z-10 p-4 sm:p-6 md:p-8 overflow-y-auto justify-center">
-                        <div class="mb-4 sm:mb-8 text-center md:text-left">
-                            <h2 class="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter leading-tight mb-2 sm:mb-4 break-words">
-                                ${exercise.name}
-                            </h2>
-                            <p class="text-zinc-400 text-xs sm:text-sm md:text-lg font-medium max-w-2xl border-l-4 border-yellow-400 shadow-[-4px_0_15px_-4px_rgba(250,204,21,0.6)] pl-3 sm:pl-4 text-left mx-auto md:mx-0">
-                                ${exercise.description}
-                            </p>
-                        </div>
+                        <div class="system-panel p-6 sm:p-8 rounded-lg border border-cyan-500/50 w-full max-w-2xl mx-auto">
+                            
+                            <div class="flex justify-between items-center mb-6 pb-4 border-b border-cyan-900/50">
+                                <span class="font-system text-cyan-600 text-[10px] sm:text-xs font-bold tracking-[0.2em] uppercase">
+                                    [ TASK ${state.currentExIndex + 1}/${totalInQueue} ]
+                                </span>
+                                <span class="font-system text-cyan-400 text-[10px] md:text-xs font-bold tracking-[0.2em] uppercase text-glow">
+                                    DAY 0${state.activeDay}
+                                </span>
+                            </div>
 
-                        <div class="flex-1 flex flex-col items-center justify-center w-full">
-                            ${displayHTML}
+                            <div class="mb-4 sm:mb-8 text-center md:text-left">
+                                <h2 class="text-2xl sm:text-4xl md:text-5xl font-black uppercase tracking-tight leading-tight mb-2 sm:mb-4 text-zinc-100">
+                                    ${exercise.name}
+                                </h2>
+                                <p class="font-system text-cyan-300 text-xs sm:text-sm md:text-base font-medium border-l-2 border-cyan-500 pl-3 sm:pl-4 text-left mx-auto md:mx-0 opacity-80">
+                                    > ${exercise.description}
+                                </p>
+                            </div>
+
+                            <div class="flex-1 flex flex-col items-center justify-center w-full">
+                                ${displayHTML}
+                            </div>
                         </div>
                     </div>
 
                     <!-- Bottom Controls -->
-                    <div class="w-full bg-zinc-900 border-t border-zinc-800 p-3 sm:p-4 z-20 pb-4 sm:pb-8">
-                        <div class="grid grid-cols-4 gap-2 md:gap-4 max-w-4xl mx-auto">
-                            <button onclick="window.handlePrev()" class="col-span-1 flex items-center justify-center p-3 sm:p-4 bg-zinc-950 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors uppercase font-bold text-[10px] sm:text-xs tracking-widest">
-                                <i data-lucide="skip-back" class="w-5 h-5 sm:w-6 sm:h-6 md:mr-2"></i> <span class="hidden md:inline">Prev</span>
+                    <div class="w-full p-4 z-20 pb-4 sm:pb-8">
+                        <div class="grid grid-cols-4 gap-2 md:gap-4 max-w-2xl mx-auto">
+                            <button onclick="window.handlePrev()" class="col-span-1 flex items-center justify-center p-3 sm:p-4 system-panel text-cyan-500 hover:text-cyan-300 hover:bg-cyan-900/30 rounded transition-colors font-system uppercase font-bold text-[10px] sm:text-xs tracking-widest">
+                                <i data-lucide="skip-back" class="w-5 h-5 sm:w-6 sm:h-6 md:mr-2"></i> <span class="hidden md:inline">PREV</span>
                             </button>
 
                             ${actionBtn}
 
-                            <button onclick="window.resetTimer()" class="col-span-1 flex items-center justify-center p-3 sm:p-4 bg-zinc-950 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors uppercase font-bold text-[10px] sm:text-xs tracking-widest">
-                                <i data-lucide="rotate-ccw" class="w-5 h-5 sm:w-6 sm:h-6 md:mr-2"></i> <span class="hidden md:inline">Reset</span>
+                            <button onclick="window.resetTimer()" class="col-span-1 flex items-center justify-center p-3 sm:p-4 system-panel text-cyan-500 hover:text-cyan-300 hover:bg-cyan-900/30 rounded transition-colors font-system uppercase font-bold text-[10px] sm:text-xs tracking-widest">
+                                <i data-lucide="rotate-ccw" class="w-5 h-5 sm:w-6 sm:h-6 md:mr-2"></i> <span class="hidden md:inline">RESET</span>
                             </button>
                         </div>
                     </div>
@@ -690,15 +662,17 @@
 
         function getCompletedHTML() {
             return `
-                <div class="flex-1 h-full bg-zinc-950 flex flex-col items-center justify-center text-white p-6 sm:p-8 text-center w-full">
-                    <div class="animate-in fade-in slide-in-from-bottom-8 duration-500 flex flex-col items-center w-full max-w-xl">
-                        <div class="text-black p-6 sm:p-8 mb-6 sm:mb-8 border-4 border-white bg-gradient-to-r from-yellow-200 via-yellow-400 to-amber-500 shadow-[0_0_40px_rgba(250,204,21,0.6)]">
-                            <i data-lucide="check" class="w-16 h-16 sm:w-20 sm:h-20" style="stroke-width: 3;"></i>
+                <div class="flex-1 h-full bg-black flex flex-col items-center justify-center text-white p-6 sm:p-8 text-center w-full relative">
+                    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyan-900/20 via-black to-black"></div>
+                    
+                    <div class="animate-in fade-in slide-in-from-bottom-8 duration-700 flex flex-col items-center w-full max-w-xl relative z-10 system-panel-active p-12 rounded-xl border border-cyan-400">
+                        <div class="mb-8">
+                            <i data-lucide="shield-check" class="w-20 h-20 sm:w-24 sm:h-24 text-cyan-400 text-glow animate-pulse mx-auto"></i>
                         </div>
-                        <h1 class="text-5xl sm:text-6xl md:text-8xl font-black uppercase tracking-tighter mb-4 sm:mb-6 drop-shadow-2xl">Obliterated</h1>
-                        <p class="text-zinc-500 text-lg sm:text-xl md:text-2xl tracking-widest uppercase font-bold mb-8 sm:mb-12">Session Logged. Rest Up.</p>
-                        <button onclick="window.returnHome()" class="w-full bg-white text-black py-4 sm:py-6 text-xl sm:text-2xl font-black uppercase tracking-tighter hover:bg-yellow-400 hover:shadow-[0_0_20px_rgba(250,204,21,0.6)] transition-all">
-                            Return to Base
+                        <h1 class="text-4xl sm:text-6xl md:text-7xl font-black uppercase tracking-tighter mb-4 text-glow">QUEST CLEARED</h1>
+                        <p class="font-system text-cyan-500 text-sm sm:text-base tracking-[0.2em] uppercase font-bold mb-12">[ REWARDS DISTRIBUTED. REST RECOMENDED. ]</p>
+                        <button onclick="window.returnHome()" class="w-full bg-cyan-500 text-black py-4 sm:py-5 text-lg sm:text-xl font-system font-bold uppercase tracking-widest hover:bg-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.6)] transition-all rounded">
+                            [ RETURN TO SYSTEM ]
                         </button>
                     </div>
                 </div>
